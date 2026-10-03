@@ -71,6 +71,12 @@ namespace ADBLogin.UI
             UpdateSplitRatio();
         }
 
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            UpdateSplitRatio();
+        }
+
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
@@ -81,8 +87,10 @@ namespace ADBLogin.UI
         {
             try
             {
-                if (_split != null && _split.Width > 500 && this.WindowState != FormWindowState.Minimized)
+                if (_split != null && _split.Width > 400 && this.WindowState != FormWindowState.Minimized)
                 {
+                    _split.Panel1MinSize = 200;
+                    _split.Panel2MinSize = 350;
                     // Tỉ lệ layout 7-5: Cột trái 5 phần (~41.7%), Cột phải 7 phần (~58.3%)
                     int target = (_split.Width * 5) / 12;
                     if (target >= _split.Panel1MinSize && (_split.Width - target) >= _split.Panel2MinSize)
@@ -139,9 +147,6 @@ namespace ADBLogin.UI
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 485, // Layout 7-5: Bên trái 5 phần (~41.7%), bên phải 7 phần (~58.3%)
-                Panel1MinSize = 250,
-                Panel2MinSize = 400,
                 SplitterWidth = 6,
                 BackColor = Color.FromArgb(229, 231, 235)
             };
