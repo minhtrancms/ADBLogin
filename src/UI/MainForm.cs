@@ -102,11 +102,12 @@ namespace ADBLogin.UI
             _lblStatsRunning = CreateStatChip("Đang mở: 0", Color.FromArgb(6, 78, 59), 320);
             _lblStatsProxy = CreateStatChip("Proxy: 0", Color.FromArgb(51, 65, 85), 425);
 
-            // Ô tìm kiếm siêu gọn góc phải
+            // Ô tìm kiếm siêu gọn góc phải (Tự động co giãn theo mép phải)
             Panel searchBoxPanel = new Panel
             {
-                Location = new Point(940, 10),
-                Size = new Size(330, 28),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(1300 - 325, 9),
+                Size = new Size(300, 30),
                 BackColor = Color.FromArgb(30, 41, 59)
             };
 
@@ -114,15 +115,15 @@ namespace ADBLogin.UI
             {
                 Text = "🔍",
                 ForeColor = Color.FromArgb(148, 163, 184),
-                Location = new Point(6, 4),
+                Location = new Point(6, 6),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 8.5F)
             };
 
             _txtSearch = new TextBox
             {
-                Location = new Point(28, 4),
-                Width = 295,
+                Location = new Point(28, 6),
+                Width = 265,
                 BorderStyle = BorderStyle.None,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
@@ -140,55 +141,71 @@ namespace ADBLogin.UI
             headerPanel.Controls.Add(_lblStatsProxy);
             headerPanel.Controls.Add(searchBoxPanel);
 
-            // ================= 2. TOOLBAR PANEL (BỘ NÚT NHỎ GỌN, TINH TẾ) =================
+            // ================= 2. TOOLBAR PANEL (BỘ NÚT TINH TẾ, CHUẨN WINDOWS 11) =================
             Panel toolPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 44,
+                Height = 43,
                 BackColor = Color.White,
                 Padding = new Padding(8, 6, 8, 6)
             };
 
-            // Group 1: Mở / Tắt Trình duyệt
-            _btnLaunch = CreateCompactButton("▶ Mở", Color.FromArgb(16, 185, 129), Color.White, 72, true);
+            ToolTip toolTip = new ToolTip();
+
+            // Group 1: Vận hành (Run Control)
+            _btnLaunch = CreateCompactButton("▶ Mở", Color.FromArgb(16, 185, 129), Color.White, 68, true, "Khởi chạy các profile đã chọn (Enter)", Color.FromArgb(5, 150, 105));
             _btnLaunch.Click += BtnLaunch_Click;
 
-            _btnStop = CreateCompactButton("⏹ Tắt", Color.FromArgb(239, 68, 68), Color.White, 65, true);
+            _btnStop = CreateCompactButton("⏹ Tắt", Color.FromArgb(239, 68, 68), Color.White, 58, true, "Đóng trình duyệt profile đang chọn", Color.FromArgb(220, 38, 38));
             _btnStop.Click += BtnStop_Click;
 
-            _btnStopAll = CreateCompactButton("⏹ Tắt Hết", Color.FromArgb(153, 27, 27), Color.White, 78, true);
+            _btnStopAll = CreateCompactButton("Tắt Hết", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 62, false, "Đóng tất cả các trình duyệt đang mở", Color.FromArgb(254, 226, 226));
             _btnStopAll.Click += BtnStopAll_Click;
 
             // Group 2: Thao tác Profile
-            _btnAutoCreate = CreateCompactButton("🚀 Auto Create", Color.FromArgb(99, 102, 241), Color.White, 105, true);
+            _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(99, 102, 241), Color.White, 88, true, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(79, 70, 229));
             _btnAutoCreate.Click += BtnAutoCreate_Click;
 
-            _btnAdd = CreateCompactButton("+ Thêm", Color.FromArgb(37, 99, 235), Color.White, 68, true);
+            _btnAdd = CreateCompactButton("+ Thêm", Color.FromArgb(37, 99, 235), Color.White, 62, true, "Thêm một profile mới thủ công", Color.FromArgb(29, 78, 216));
             _btnAdd.Click += BtnAdd_Click;
 
-            _btnEdit = CreateCompactButton("✏️ Sửa", Color.FromArgb(243, 244, 246), Color.FromArgb(31, 41, 55), 65, false);
+            _btnEdit = CreateCompactButton("✏️ Sửa", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 54, false, "Chỉnh sửa cấu hình profile đang chọn", Color.FromArgb(241, 245, 249));
             _btnEdit.Click += BtnEdit_Click;
 
-            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 65, false);
+            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 54, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
             _btnDelete.Click += BtnDelete_Click;
 
-            _btnOpenFolder = CreateCompactButton("📁 Thư Mục", Color.FromArgb(243, 244, 246), Color.FromArgb(31, 41, 55), 85, false);
+            _btnOpenFolder = CreateCompactButton("📁 File", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 54, false, "Mở thư mục lưu trữ profile trên máy", Color.FromArgb(241, 245, 249));
             _btnOpenFolder.Click += BtnOpenFolder_Click;
 
             // Group 3: Proxy & Công cụ
-            _btnCheckProxy = CreateCompactButton("⚡ Check", Color.FromArgb(217, 119, 6), Color.White, 75, true);
+            _btnCheckProxy = CreateCompactButton("⚡ Check", Color.FromArgb(245, 158, 11), Color.White, 64, true, "Kiểm tra Proxy các profile được chọn", Color.FromArgb(217, 119, 6));
             _btnCheckProxy.Click += BtnCheckProxy_Click;
 
-            _btnCheckAllProxy = CreateCompactButton("⚡ Check Hết", Color.FromArgb(245, 158, 11), Color.White, 95, true);
+            _btnCheckAllProxy = CreateCompactButton("Tất Cả", Color.FromArgb(255, 251, 235), Color.FromArgb(180, 83, 9), 55, false, "Kiểm tra Proxy toàn bộ danh sách profile", Color.FromArgb(254, 243, 199));
             _btnCheckAllProxy.Click += BtnCheckAllProxy_Click;
 
-            _btnCopyProxy = CreateCompactButton("📋 Proxy", Color.FromArgb(243, 244, 246), Color.FromArgb(31, 41, 55), 72, false);
+            _btnCopyProxy = CreateCompactButton("📋 Copy", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 56, false, "Sao chép Proxy vào Clipboard", Color.FromArgb(241, 245, 249));
             _btnCopyProxy.Click += BtnCopyProxy_Click;
 
-            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(243, 244, 246), Color.FromArgb(31, 41, 55), 45, false);
+            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 36, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
             _btnRefresh.Click += (s, e) => LoadData();
 
-            // Chế độ Mobile & Cấu hình Lưới
+            // Group 4: Bộ chọn phiên bản Chrome / Orbita
+            Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            _cboBrowserVersion = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 135,
+                Height = 24,
+                Font = new Font("Segoe UI", 8.5F),
+                Cursor = Cursors.Hand
+            };
+            toolTip.SetToolTip(_cboBrowserVersion, "Chọn phiên bản lõi Chrome / Orbita sử dụng để mở profile");
+            PopulateBrowserVersions();
+            _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
+
+            // Group 5: Chế độ Mobile & Lưới
             _chkMobileMode = new CheckBox
             {
                 Text = "📱 Mobile",
@@ -200,12 +217,10 @@ namespace ADBLogin.UI
             };
 
             Label lblGridConfig = new Label { Text = "Lưới:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
-            _numRows = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 36, Height = 22, Font = new Font("Segoe UI", 8.5F) };
-            Label lblRowUnit = new Label { Text = "hàng x", AutoSize = true, Font = new Font("Segoe UI", 8F), ForeColor = Color.FromArgb(100, 116, 139) };
-            _numCols = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 4, Width = 36, Height = 22, Font = new Font("Segoe UI", 8.5F) };
-            Label lblColUnit = new Label { Text = "cột", AutoSize = true, Font = new Font("Segoe UI", 8F), ForeColor = Color.FromArgb(100, 116, 139) };
+            _numRows = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 34, Height = 22, Font = new Font("Segoe UI", 8.5F) };
+            Label lblRowUnit = new Label { Text = "x", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
+            _numCols = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 4, Width = 34, Height = 22, Font = new Font("Segoe UI", 8.5F) };
 
-            ToolTip toolTip = new ToolTip();
             toolTip.SetToolTip(_chkMobileMode, "Chế độ giao diện điện thoại (Scale 70%, tự động xếp 1 hàng 6 máy)");
             toolTip.SetToolTip(_numRows, "Số hàng (Rows)");
             toolTip.SetToolTip(_numCols, "Số cột / Số máy trên 1 hàng (Columns)");
@@ -232,20 +247,6 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(_btnAdd);
             toolPanel.Controls.Add(_btnEdit);
             toolPanel.Controls.Add(_btnDelete);
-            // Bộ chọn phiên bản Chrome / Orbita
-            Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
-            _cboBrowserVersion = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 145,
-                Height = 24,
-                Font = new Font("Segoe UI", 8.5F),
-                Cursor = Cursors.Hand
-            };
-            toolTip.SetToolTip(_cboBrowserVersion, "Chọn phiên bản lõi Chrome / Orbita sử dụng để mở profile");
-            PopulateBrowserVersions();
-            _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
-
             toolPanel.Controls.Add(_btnOpenFolder);
             toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(_btnCheckProxy);
@@ -253,15 +254,14 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(_btnCopyProxy);
             toolPanel.Controls.Add(_btnRefresh);
             toolPanel.Controls.Add(CreateDivider());
+            toolPanel.Controls.Add(lblBrowser);
+            toolPanel.Controls.Add(_cboBrowserVersion);
+            toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(_chkMobileMode);
             toolPanel.Controls.Add(lblGridConfig);
             toolPanel.Controls.Add(_numRows);
             toolPanel.Controls.Add(lblRowUnit);
             toolPanel.Controls.Add(_numCols);
-            toolPanel.Controls.Add(lblColUnit);
-            toolPanel.Controls.Add(CreateDivider());
-            toolPanel.Controls.Add(lblBrowser);
-            toolPanel.Controls.Add(_cboBrowserVersion);
 
             LayoutCompactToolbar(toolPanel);
 
@@ -350,12 +350,12 @@ namespace ADBLogin.UI
             };
         }
 
-        private Button CreateCompactButton(string text, Color backColor, Color foreColor, int width, bool isPrimary)
+        private Button CreateCompactButton(string text, Color backColor, Color foreColor, int width, bool isPrimary, string tooltip = "", Color? hoverColor = null)
         {
             Button btn = new Button
             {
                 Text = text,
-                Size = new Size(width, 30),
+                Size = new Size(width, 29),
                 BackColor = backColor,
                 ForeColor = foreColor,
                 FlatStyle = FlatStyle.Flat,
@@ -363,7 +363,28 @@ namespace ADBLogin.UI
                 Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = isPrimary ? 0 : 1;
-            btn.FlatAppearance.BorderColor = Color.FromArgb(209, 213, 219);
+            btn.FlatAppearance.BorderColor = isPrimary ? Color.Transparent : Color.FromArgb(209, 213, 219);
+
+            if (hoverColor.HasValue)
+            {
+                btn.FlatAppearance.MouseOverBackColor = hoverColor.Value;
+            }
+            else if (isPrimary)
+            {
+                btn.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(backColor, 0.08f);
+            }
+            else
+            {
+                btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(226, 232, 240);
+            }
+            btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(backColor, 0.18f);
+
+            if (!string.IsNullOrEmpty(tooltip))
+            {
+                ToolTip tt = new ToolTip();
+                tt.SetToolTip(btn, tooltip);
+            }
+
             return btn;
         }
 
@@ -371,16 +392,16 @@ namespace ADBLogin.UI
         {
             return new Panel
             {
-                Size = new Size(1, 22),
+                Size = new Size(1, 20),
                 BackColor = Color.FromArgb(229, 231, 235),
-                Margin = new Padding(4, 4, 4, 4)
+                Margin = new Padding(3, 4, 3, 4)
             };
         }
 
         private void LayoutCompactToolbar(Panel panel)
         {
             int currentX = 8;
-            int gap = 4;
+            int gap = 3;
             foreach (Control c in panel.Controls)
             {
                 if (c is Button)
@@ -391,12 +412,12 @@ namespace ADBLogin.UI
                 else if (c is Panel && c.Width == 1) // Divider
                 {
                     c.Location = new Point(currentX + 2, 11);
-                    currentX += 8;
+                    currentX += 7;
                 }
                 else if (c is CheckBox)
                 {
                     c.Location = new Point(currentX + 2, 11);
-                    currentX += c.Width + gap + 4;
+                    currentX += c.Width + gap + 3;
                 }
                 else if (c is NumericUpDown)
                 {
