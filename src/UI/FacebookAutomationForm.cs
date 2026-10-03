@@ -21,6 +21,7 @@ namespace ADBLogin.UI
         private Button _btnSelectAll;
         private Button _btnDeselectAll;
         private Button _btnSelectRunning;
+        private readonly HashSet<string> _selectedProfileIds = new HashSet<string>();
 
         // Tab 1: Nuoi nick
         private CheckBox _chkSurfFeed;
@@ -47,6 +48,18 @@ namespace ADBLogin.UI
         private TextBox _txtCommentSpintax;
         private CheckBox _chkJoinGroup;
         private TextBox _txtGroupUrl;
+
+        // Tab 4: Dang bai viet (Auto Post)
+        private CheckBox _chkEnablePost;
+        private RadioButton _radPostWall;
+        private RadioButton _radPostGroup;
+        private TextBox _txtPostGroupTarget;
+        private TextBox _txtAutoPostContent;
+        private CheckBox _chkPostAttachImage;
+        private TextBox _txtPostImagePath;
+        private Button _btnBrowsePostImage;
+        private Button _btnTestPostSpintax;
+        private Button _btnPostNow;
 
         // Bottom Controls
         private NumericUpDown _numThreads;
@@ -195,7 +208,25 @@ namespace ADBLogin.UI
                 Dock = DockStyle.Top,
                 Height = 26,
                 Font = new Font("Segoe UI", 9F),
-                Margin = new Padding(0, 4, 0, 4)
+                Margin = new Padding(0, 4, 0, 4),
+                Text = "🔍 Tìm kiếm profile...",
+                ForeColor = Color.FromArgb(100, 116, 139)
+            };
+            _txtSearch.GotFocus += (s, e) =>
+            {
+                if (_txtSearch.Text == "🔍 Tìm kiếm profile...")
+                {
+                    _txtSearch.Text = "";
+                    _txtSearch.ForeColor = Color.FromArgb(30, 41, 59);
+                }
+            };
+            _txtSearch.LostFocus += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
+                {
+                    _txtSearch.Text = "🔍 Tìm kiếm profile...";
+                    _txtSearch.ForeColor = Color.FromArgb(100, 116, 139);
+                }
             };
             _txtSearch.TextChanged += (s, e) => FilterProfileList();
 
@@ -225,7 +256,18 @@ namespace ADBLogin.UI
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.White
             };
-            _chkListProfiles.ItemCheck += (s, e) => this.BeginInvoke(new Action(UpdateProfileCountLabel));
+            _chkListProfiles.ItemCheck += (s, e) =>
+            {
+                var item = _chkListProfiles.Items[e.Index] as ProfileItem;
+                if (item != null)
+                {
+                    if (e.NewValue == CheckState.Checked)
+                        _selectedProfileIds.Add(item.Profile.ProfileId);
+                    else
+                        _selectedProfileIds.Remove(item.Profile.ProfileId);
+                }
+                this.BeginInvoke(new Action(UpdateProfileCountLabel));
+            };
 
             pnlLeft.Controls.Add(_chkListProfiles);
             pnlLeft.Controls.Add(pnlSelectButtons);
@@ -513,8 +555,9 @@ namespace ADBLogin.UI
             tabSeeding.Controls.Add(grpGroup);
             tabSeeding.Controls.Add(grpPost);
             tabs.TabPages.Add(tabSeeding);
+            tabs.TabPages.Add(CreatePostTab());
 
-            // ===== TAB 4: Cổng CDP & Local API Studio =====
+            // ===== TAB 5: Cổng CDP & Local API Studio =====
             TabPage tabCdp = new TabPage("🌐 Cổng CDP & Local API");
             tabCdp.BackColor = Color.White;
             tabCdp.AutoScroll = true;
@@ -787,13 +830,180 @@ namespace ADBLogin.UI
             catch { }
         }
 
+        #region Create Tabs
+
+        private TabPage CreatePostTab()
+        {
+            TabPage tab = new TabPage("📝 Đăng Bài Viết") { BackColor = Color.White, AutoScroll = true };
+            Panel pnl = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14), AutoScroll = true };
+
+            // Group 1: Vị trí đăng bài
+            GroupBox grpTarget = new GroupBox
+            {
+                Text = "1. Vị Trí Đăng Bài Viết",
+                Dock = DockStyle.Top,
+                Height = 85,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(12)
+            };
+
+            _radPostWall = new RadioButton { Text = "Tường cá nhân (Newsfeed / Timeline)", Location = new Point(14, 24), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            _radPostGroup = new RadioButton { Text = "Nhóm Facebook (Group)", Location = new Point(270, 24), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            
+            Label lblGroupTarget = new Label { Text = "Link hoặc ID nhóm:", Location = new Point(14, 52), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Regular), ForeColor = Color.Gray };
+            _txtPostGroupTarget = new TextBox { Location = new Point(135, 49), Width = 560, Height = 24, Font = new Font("Segoe UI", 9F), Enabled = false };
+            
+            _radPostGroup.CheckedChanged += (s, e) => { _txtPostGroupTarget.Enabled = _radPostGroup.Checked; };
+
+            grpTarget.Controls.Add(lblGroupTarget);
+            grpTarget.Controls.Add(_txtPostGroupTarget);
+            grpTarget.Controls.Add(_radPostGroup);
+            grpTarget.Controls.Add(_radPostWall);
+
+            // Group 2: Nội dung bài viết
+            GroupBox grpContent = new GroupBox
+            {
+                Text = "2. Nội Dung Bài Viết (Hỗ trợ Spintax {A|B|C} chống trùng lặp)",
+                Dock = DockStyle.Top,
+                Height = 185,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(12)
+            };
+
+            _txtAutoPostContent = new TextBox
+            {
+                Location = new Point(14, 25),
+                Width = 710,
+                Height = 110,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9F),
+                Text = "{Chào mọi người|Hello cả nhà|Chúc anh em ngày mới tốt lành}! {Hôm nay mình chia sẻ thông tin hữu ích này|Mọi người cùng xem qua nhé|Cập nhật tin tức mới nhất}. Chúc mọi người luôn thành công! #facebook #adblogin"
+            };
+
+            _btnTestPostSpintax = new Button
+            {
+                Text = "🎲 Thử Spintax ngẫu nhiên",
+                Location = new Point(14, 142),
+                Width = 180,
+                Height = 30,
+                BackColor = Color.FromArgb(241, 245, 249),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
+            _btnTestPostSpintax.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnTestPostSpintax.Click += (s, e) =>
+            {
+                string sample = SpintaxHelper.Process(_txtAutoPostContent.Text);
+                MessageBox.Show(sample, "Xem trước kết quả Spintax", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            grpContent.Controls.Add(_btnTestPostSpintax);
+            grpContent.Controls.Add(_txtAutoPostContent);
+
+            // Group 3: Đính kèm hình ảnh
+            GroupBox grpImage = new GroupBox
+            {
+                Text = "3. Đính Kèm Hình Ảnh (Tùy chọn)",
+                Dock = DockStyle.Top,
+                Height = 85,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(12)
+            };
+
+            _chkPostAttachImage = new CheckBox { Text = "Đăng kèm hình ảnh từ máy tính:", Location = new Point(14, 24), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            _txtPostImagePath = new TextBox { Location = new Point(14, 48), Width = 570, Height = 24, Font = new Font("Segoe UI", 9F), Enabled = false };
+            _btnBrowsePostImage = new Button
+            {
+                Text = "📁 Chọn ảnh...",
+                Location = new Point(592, 46),
+                Width = 130,
+                Height = 27,
+                BackColor = Color.FromArgb(241, 245, 249),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Enabled = false
+            };
+            _btnBrowsePostImage.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+
+            _chkPostAttachImage.CheckedChanged += (s, e) =>
+            {
+                _txtPostImagePath.Enabled = _chkPostAttachImage.Checked;
+                _btnBrowsePostImage.Enabled = _chkPostAttachImage.Checked;
+            };
+
+            _btnBrowsePostImage.Click += (s, e) =>
+            {
+                using (var ofd = new OpenFileDialog())
+                {
+                    ofd.Title = "Chọn hình ảnh để đăng lên Facebook";
+                    ofd.Filter = "Tất cả hình ảnh (*.jpg;*.jpeg;*.png;*.webp)|*.jpg;*.jpeg;*.png;*.webp|Tất cả tệp (*.*)|*.*";
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        _txtPostImagePath.Text = ofd.FileName;
+                    }
+                }
+            };
+
+            grpImage.Controls.Add(_btnBrowsePostImage);
+            grpImage.Controls.Add(_txtPostImagePath);
+            grpImage.Controls.Add(_chkPostAttachImage);
+
+            // Group 4: Thực thi
+            GroupBox grpAction = new GroupBox
+            {
+                Text = "4. Cấu Hình Thực Thi",
+                Dock = DockStyle.Top,
+                Height = 85,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(12)
+            };
+
+            _chkEnablePost = new CheckBox { Text = "Tự động đăng bài khi bấm nút [BẮT ĐẦU CHẠY]", Location = new Point(14, 25), AutoSize = true, Checked = false, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(24, 119, 242) };
+            
+            _btnPostNow = new Button
+            {
+                Text = "🚀 ĐĂNG BÀI NGAY CHO CÁC PROFILE ĐÃ CHỌN",
+                Location = new Point(14, 48),
+                Width = 400,
+                Height = 30,
+                BackColor = Color.FromArgb(24, 119, 242),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            _btnPostNow.FlatAppearance.BorderSize = 0;
+            _btnPostNow.Click += (s, e) =>
+            {
+                _chkEnablePost.Checked = true;
+                BtnStart_Click(s, e);
+            };
+
+            grpAction.Controls.Add(_btnPostNow);
+            grpAction.Controls.Add(_chkEnablePost);
+
+            pnl.Controls.Add(grpAction);
+            pnl.Controls.Add(grpImage);
+            pnl.Controls.Add(grpContent);
+            pnl.Controls.Add(grpTarget);
+
+            tab.Controls.Add(pnl);
+            return tab;
+        }
+
+        #endregion
+
         private void UpdateProfileCountLabel()
         {
             if (_lblProfileCount != null)
             {
-                int total = _chkListProfiles.Items.Count;
-                int checkedCount = _chkListProfiles.CheckedItems.Count;
-                _lblProfileCount.Text = string.Format("Đã chọn: {0}/{1}", checkedCount, total);
+                _lblProfileCount.Text = string.Format("Đã chọn: {0}/{1}", _selectedProfileIds.Count, _allProfiles.Count);
             }
         }
 
@@ -804,24 +1014,45 @@ namespace ADBLogin.UI
             {
                 bool running = BrowserSessionManager.Instance.IsRunning(p.ProfileId);
                 string display = string.Format("{0} [{1}]", p.ProfileName, running ? "RUNNING" : "STOP");
-                _chkListProfiles.Items.Add(new ProfileItem { Profile = p, Display = display });
+                int idx = _chkListProfiles.Items.Add(new ProfileItem { Profile = p, Display = display });
+                if (_selectedProfileIds.Contains(p.ProfileId))
+                {
+                    _chkListProfiles.SetItemChecked(idx, true);
+                }
             }
             UpdateProfileCountLabel();
         }
 
         private void FilterProfileList()
         {
-            string q = _txtSearch.Text.Trim().ToLowerInvariant();
+            string q = _txtSearch.Text.Trim();
+            if (q.StartsWith("🔍")) q = "";
+            q = q.ToLowerInvariant();
+
+            _chkListProfiles.BeginUpdate();
             _chkListProfiles.Items.Clear();
+
             foreach (var p in _allProfiles)
             {
-                if (string.IsNullOrEmpty(q) || p.ProfileName.ToLowerInvariant().Contains(q))
+                bool match = string.IsNullOrEmpty(q) ||
+                    (!string.IsNullOrEmpty(p.ProfileName) && p.ProfileName.ToLowerInvariant().Contains(q)) ||
+                    (!string.IsNullOrEmpty(p.Username) && p.Username.ToLowerInvariant().Contains(q)) ||
+                    (!string.IsNullOrEmpty(p.ProfileId) && p.ProfileId.ToLowerInvariant().Contains(q)) ||
+                    (!string.IsNullOrEmpty(p.Proxy) && p.Proxy.ToLowerInvariant().Contains(q)) ||
+                    (!string.IsNullOrEmpty(p.Notes) && p.Notes.ToLowerInvariant().Contains(q));
+
+                if (match)
                 {
                     bool running = BrowserSessionManager.Instance.IsRunning(p.ProfileId);
                     string display = string.Format("{0} [{1}]", p.ProfileName, running ? "RUNNING" : "STOP");
-                    _chkListProfiles.Items.Add(new ProfileItem { Profile = p, Display = display });
+                    int idx = _chkListProfiles.Items.Add(new ProfileItem { Profile = p, Display = display });
+                    if (_selectedProfileIds.Contains(p.ProfileId))
+                    {
+                        _chkListProfiles.SetItemChecked(idx, true);
+                    }
                 }
             }
+            _chkListProfiles.EndUpdate();
             UpdateProfileCountLabel();
         }
 
@@ -829,6 +1060,12 @@ namespace ADBLogin.UI
         {
             for (int i = 0; i < _chkListProfiles.Items.Count; i++)
             {
+                var item = _chkListProfiles.Items[i] as ProfileItem;
+                if (item != null)
+                {
+                    if (isChecked) _selectedProfileIds.Add(item.Profile.ProfileId);
+                    else _selectedProfileIds.Remove(item.Profile.ProfileId);
+                }
                 _chkListProfiles.SetItemChecked(i, isChecked);
             }
             UpdateProfileCountLabel();
@@ -839,13 +1076,12 @@ namespace ADBLogin.UI
             for (int i = 0; i < _chkListProfiles.Items.Count; i++)
             {
                 var item = _chkListProfiles.Items[i] as ProfileItem;
-                if (item != null && BrowserSessionManager.Instance.IsRunning(item.Profile.ProfileId))
+                if (item != null)
                 {
-                    _chkListProfiles.SetItemChecked(i, true);
-                }
-                else
-                {
-                    _chkListProfiles.SetItemChecked(i, false);
+                    bool running = BrowserSessionManager.Instance.IsRunning(item.Profile.ProfileId);
+                    if (running) _selectedProfileIds.Add(item.Profile.ProfileId);
+                    else _selectedProfileIds.Remove(item.Profile.ProfileId);
+                    _chkListProfiles.SetItemChecked(i, running);
                 }
             }
             UpdateProfileCountLabel();
@@ -854,10 +1090,12 @@ namespace ADBLogin.UI
         private List<UserProfile> GetSelectedProfiles()
         {
             var list = new List<UserProfile>();
-            foreach (var item in _chkListProfiles.CheckedItems)
+            foreach (var p in _allProfiles)
             {
-                var pItem = item as ProfileItem;
-                if (pItem != null) list.Add(pItem.Profile);
+                if (_selectedProfileIds.Contains(p.ProfileId))
+                {
+                    list.Add(p);
+                }
             }
             return list;
         }
@@ -923,6 +1161,12 @@ namespace ADBLogin.UI
             bool doJoin = _chkJoinGroup.Checked && !string.IsNullOrWhiteSpace(_txtGroupUrl.Text);
             string groupUrl = _txtGroupUrl.Text.Trim();
 
+            // Cấu hình Đăng bài viết
+            bool doPost = _chkEnablePost != null && _chkEnablePost.Checked;
+            string postContent = _txtAutoPostContent != null ? _txtAutoPostContent.Text : "";
+            string postImage = (_chkPostAttachImage != null && _chkPostAttachImage.Checked && _txtPostImagePath != null) ? _txtPostImagePath.Text.Trim() : null;
+            string postGroupUrl = (_radPostGroup != null && _radPostGroup.Checked && _txtPostGroupTarget != null) ? _txtPostGroupTarget.Text.Trim() : null;
+
             await Task.Run(() =>
             {
                 var options = new ParallelOptions
@@ -939,7 +1183,7 @@ namespace ADBLogin.UI
 
                         RunProfileTask(profile, doSurf, feedSec, doLike, maxLike, doReels, reelCount, doNotif,
                             doLoginCookie, cookieStr, doLoginCreds, userStr, passStr, secretStr,
-                            postUrl, commentSpintax, doJoin, groupUrl, _cts.Token);
+                            postUrl, commentSpintax, doJoin, groupUrl, doPost, postContent, postImage, postGroupUrl, _cts.Token);
                     });
                 }
                 catch (OperationCanceledException)
@@ -965,7 +1209,8 @@ namespace ADBLogin.UI
 
         private void RunProfileTask(UserProfile profile, bool doSurf, int feedSec, bool doLike, int maxLike, bool doReels, int reelCount, bool doNotif,
             bool doLoginCookie, string cookieStr, bool doLoginCreds, string userStr, string passStr, string secretStr,
-            string postUrl, string commentSpintax, bool doJoin, string groupUrl, CancellationToken ct)
+            string postUrl, string commentSpintax, bool doJoin, string groupUrl,
+            bool doPost, string postContent, string postImage, string postGroupUrl, CancellationToken ct)
         {
             string tag = string.Format("[{0}]", profile.ProfileName);
             Log(string.Format("{0} Đang chuẩn bị trình duyệt...", tag));
@@ -1034,6 +1279,13 @@ namespace ADBLogin.UI
             if (!string.IsNullOrEmpty(postUrl) && !string.IsNullOrEmpty(commentSpintax) && !ct.IsCancellationRequested)
             {
                 fb.CommentPost(driver, postUrl, commentSpintax, m => Log(tag + " " + m));
+            }
+
+            // 8. Dang bai viet len tuong hoac vao nhom
+            if (doPost && !string.IsNullOrEmpty(postContent) && !ct.IsCancellationRequested)
+            {
+                Log(string.Format("{0} Đang tiến hành đăng bài viết...", tag));
+                fb.CreatePost(driver, postContent, postImage, postGroupUrl, m => Log(tag + " " + m));
             }
 
             Log(string.Format("{0} Đã hoàn thành các tác vụ trên profile này!", tag));

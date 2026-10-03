@@ -685,6 +685,239 @@ namespace ADBLogin.Core.Automation
             }
         }
 
+        /// <summary>
+        /// Đăng bài viết mới lên Trang cá nhân (Newsfeed) hoặc vào Nhóm (Facebook Group)
+        /// Hỗ trợ nội dung Spintax và đính kèm hình ảnh
+        /// </summary>
+        public bool CreatePost(IWebDriver driver, string contentSpintax, string imagePath = null, string targetGroupUrl = null, Action<string> log = null)
+        {
+            try
+            {
+                string resolvedText = SpintaxHelper.Process(contentSpintax);
+                IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
+
+                if (!string.IsNullOrWhiteSpace(targetGroupUrl))
+                {
+                    DoLog(log, string.Format("[*] Điều hướng tới nhóm đăng bài: {0}", targetGroupUrl));
+                    driver.Navigate().GoToUrl(targetGroupUrl.Trim());
+                }
+                else
+                {
+                    DoLog(log, "[*] Điều hướng tới trang chủ Facebook...");
+                    driver.Navigate().GoToUrl("https://www.facebook.com/");
+                }
+                Sleep(4000, 6000);
+
+                // 1. Tìm và bấm vào khung "Bạn đang nghĩ gì thế?" / "What's on your mind?" / "Tạo bài viết"
+                DoLog(log, "[*] Đang tìm khung tạo bài viết...");
+                var triggerSelectors = new string[]
+                {
+                    "div[aria-label*='Bạn đang nghĩ gì']",
+                    "div[aria-label*=\"What's on your mind\"]",
+                    "div[aria-label*='Tạo bài viết']",
+                    "div[aria-label*='Create a post']",
+                    "div[aria-label*='Viết gì đó']",
+                    "div[aria-label*='Write something']",
+                    "div[role='button'][tabindex='0']"
+                };
+
+                IWebElement triggerBtn = null;
+                foreach (var sel in triggerSelectors)
+                {
+                    try
+                    {
+                        var elements = driver.FindElements(By.CssSelector(sel));
+                        foreach (var el in elements)
+                        {
+                            if (el.Displayed)
+                            {
+                                string aria = el.GetAttribute("aria-label");
+                                string txt = el.Text;
+                                if ((!string.IsNullOrEmpty(aria) && (aria.Contains("nghĩ gì") || aria.Contains("mind") || aria.Contains("Tạo bài viết") || aria.Contains("Viết gì đó") || aria.Contains("Write something"))) ||
+                                    (!string.IsNullOrEmpty(txt) && (txt.Contains("nghĩ gì") || txt.Contains("mind") || txt.Contains("Tạo bài viết") || txt.Contains("Viết gì đó") || txt.Contains("Write something"))))
+                                {
+                                    triggerBtn = el;
+                                    break;
+                                }
+                            }
+                        }
+                        if (triggerBtn != null) break;
+                    }
+                    catch { }
+                }
+
+                if (triggerBtn == null)
+                {
+                    // Fallback xpath
+                    try
+                    {
+                        var elements = driver.FindElements(By.XPath("//*[contains(text(), 'Bạn đang nghĩ gì') or contains(text(), \"What's on your mind\") or contains(text(), 'Tạo bài viết') or contains(text(), 'Viết gì đó')]"));
+                        foreach (var el in elements)
+                        {
+                            if (el.Displayed)
+                            {
+                                triggerBtn = el;
+                                break;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                if (triggerBtn != null)
+                {
+                    DoLog(log, "[*] Đã tìm thấy nút Tạo bài viết, đang bấm mở hộp thoại...");
+                    try { triggerBtn.Click(); }
+                    catch { js.ExecuteScript("arguments[0].click();", triggerBtn); }
+                    Sleep(2500, 4000);
+                }
+                else
+                {
+                    DoLog(log, "[-] Không tìm thấy nút Tạo bài viết trên giao diện hiện tại");
+                    return false;
+                }
+
+                // 2. Tìm ô nhập văn bản bên trong dialog soạn bài
+                DoLog(log, "[*] Đang tìm ô soạn thảo văn bản...");
+                IWebElement postInput = null;
+                var inputSelectors = new string[]
+                {
+                    "div[role='dialog'] div[role='textbox'][contenteditable='true']",
+                    "div[role='dialog'] div[aria-label*='Bạn đang nghĩ gì']",
+                    "div[role='dialog'] div[aria-label*=\"What's on your mind\"]",
+                    "div[role='textbox'][contenteditable='true']"
+                };
+
+                foreach (var sel in inputSelectors)
+                {
+                    try
+                    {
+                        var inputs = driver.FindElements(By.CssSelector(sel));
+                        foreach (var inp in inputs)
+                        {
+                            if (inp.Displayed)
+                            {
+                                postInput = inp;
+                                break;
+                            }
+                        }
+                        if (postInput != null) break;
+                    }
+                    catch { }
+                }
+
+                if (postInput == null)
+                {
+                    DoLog(log, "[-] Không tìm thấy ô soạn thảo văn bản trong popup bài viết");
+                    return false;
+                }
+
+                postInput.Click();
+                Sleep(800, 1500);
+
+                DoLog(log, string.Format("[*] Đang nhập nội dung bài viết ({0} ký tự)...", resolvedText.Length));
+                HumanType(postInput, resolvedText);
+                Sleep(1500, 2500);
+
+                // 3. Đính kèm hình ảnh (nếu có)
+                if (!string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath))
+                {
+                    DoLog(log, string.Format("[*] Đang đính kèm hình ảnh: {0}", Path.GetFileName(imagePath)));
+                    try
+                    {
+                        // Thử tìm nút Ảnh/video để kích hoạt input[type=file] nếu cần
+                        var photoButtons = driver.FindElements(By.CssSelector("div[role='dialog'] div[aria-label*='Ảnh/video'], div[role='dialog'] div[aria-label*='Photo/video'], div[aria-label*='Thêm ảnh']"));
+                        if (photoButtons.Count > 0 && photoButtons[0].Displayed)
+                        {
+                            try { photoButtons[0].Click(); } catch { js.ExecuteScript("arguments[0].click();", photoButtons[0]); }
+                            Sleep(1500, 2500);
+                        }
+
+                        var fileInputs = driver.FindElements(By.CssSelector("input[type='file']"));
+                        bool fileUploaded = false;
+                        foreach (var fi in fileInputs)
+                        {
+                            try
+                            {
+                                fi.SendKeys(Path.GetFullPath(imagePath));
+                                fileUploaded = true;
+                                DoLog(log, "[+] Đã nạp file ảnh thành công, đang đợi tải lên...");
+                                Sleep(3500, 5500);
+                                break;
+                            }
+                            catch { }
+                        }
+
+                        if (!fileUploaded)
+                        {
+                            DoLog(log, "[!] Không thể upload ảnh qua input file, sẽ đăng bài ở chế độ text");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        DoLog(log, string.Format("[!] Lỗi đính kèm ảnh: {0}, tiếp tục đăng văn bản", ex.Message));
+                    }
+                }
+
+                // 4. Tìm và bấm nút Đăng (Post)
+                DoLog(log, "[*] Đang tìm nút Đăng bài...");
+                IWebElement postBtn = null;
+                var postBtnSelectors = new string[]
+                {
+                    "div[role='dialog'] div[aria-label='Đăng']",
+                    "div[role='dialog'] div[aria-label='Post']",
+                    "div[role='dialog'] div[role='button'] span"
+                };
+
+                foreach (var sel in postBtnSelectors)
+                {
+                    try
+                    {
+                        var buttons = driver.FindElements(By.CssSelector(sel));
+                        foreach (var b in buttons)
+                        {
+                            if (b.Displayed)
+                            {
+                                string aria = b.GetAttribute("aria-label");
+                                string txt = b.Text;
+                                if ((!string.IsNullOrEmpty(aria) && (aria.Equals("Đăng", StringComparison.OrdinalIgnoreCase) || aria.Equals("Post", StringComparison.OrdinalIgnoreCase))) ||
+                                    (!string.IsNullOrEmpty(txt) && (txt.Trim().Equals("Đăng", StringComparison.OrdinalIgnoreCase) || txt.Trim().Equals("Post", StringComparison.OrdinalIgnoreCase))))
+                                {
+                                    postBtn = b;
+                                    break;
+                                }
+                            }
+                        }
+                        if (postBtn != null) break;
+                    }
+                    catch { }
+                }
+
+                if (postBtn != null)
+                {
+                    DoLog(log, "[*] Đang bấm nút [ĐĂNG]...");
+                    try { postBtn.Click(); }
+                    catch { js.ExecuteScript("arguments[0].click();", postBtn); }
+
+                    // Chờ đăng bài hoàn tất
+                    DoLog(log, "[*] Đang chờ Facebook xử lý đăng bài...");
+                    Sleep(5000, 8000);
+                    DoLog(log, "[+] ĐÃ ĐĂNG BÀI VIẾT THÀNH CÔNG LÊN FACEBOOK!");
+                    return true;
+                }
+                else
+                {
+                    DoLog(log, "[-] Không tìm thấy nút Đăng (Post) trong hộp thoại");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                DoLog(log, string.Format("[-] Lỗi khi đăng bài viết: {0}", ex.Message));
+                return false;
+            }
+        }
+
         #endregion
     }
 }
