@@ -12,6 +12,11 @@ namespace ADBLogin.Core.Automation
         private static readonly Random _rnd = new Random();
         private static readonly Regex _regex = new Regex(@"\{([^{}]+)\}", RegexOptions.Compiled);
 
+        public static string Spin(string text)
+        {
+            return Process(text);
+        }
+
         public static string Process(string text)
         {
             if (string.IsNullOrEmpty(text)) return string.Empty;

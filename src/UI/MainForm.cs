@@ -33,6 +33,8 @@ namespace ADBLogin.UI
         private Button _btnCopyProxy;
         private Button _btnRefresh;
         private Button _btnFacebookAuto;
+        private Button _btnGoogleAuto;
+        private Button _btnTikTokAuto;
 
         private NumericUpDown _numRows;
         private NumericUpDown _numCols;
@@ -207,6 +209,34 @@ namespace ADBLogin.UI
                 }
             };
 
+            _btnGoogleAuto = CreateCompactButton("🌐 Auto Google", Color.FromArgb(234, 67, 53), Color.White, 96, true, "Mở Bộ Công Cụ Tự Động Hóa Google & Gmail Studio", Color.FromArgb(200, 45, 35));
+            _btnGoogleAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var googleForm = new GoogleAutomationForm(_accountManager.GetAllProfiles());
+                    googleForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Google:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnTikTokAuto = CreateCompactButton("🎵 Auto TikTok", Color.FromArgb(15, 23, 42), Color.White, 94, true, "Mở Bộ Công Cụ Tự Động Hóa TikTok & FYP Studio", Color.FromArgb(30, 41, 59));
+            _btnTikTokAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var ttForm = new TikTokAutomationForm(_accountManager.GetAllProfiles());
+                    ttForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto TikTok:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
             // Group 4: Bộ chọn phiên bản Chrome / Orbita
             Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
             _cboBrowserVersion = new ComboBox
@@ -271,6 +301,8 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(_btnRefresh);
             toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(_btnFacebookAuto);
+            toolPanel.Controls.Add(_btnGoogleAuto);
+            toolPanel.Controls.Add(_btnTikTokAuto);
             toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(lblBrowser);
             toolPanel.Controls.Add(_cboBrowserVersion);
@@ -677,6 +709,38 @@ namespace ADBLogin.UI
                 catch (Exception ex)
                 {
                     MessageBox.Show(string.Format("Lỗi mở giao diện Auto FB:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoGoogle = _contextMenu.Items.Add("🌐 Kịch bản Google & Gmail");
+            itemAutoGoogle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoGoogle.ForeColor = Color.FromArgb(219, 68, 55);
+            itemAutoGoogle.Click += (s, e) =>
+            {
+                try
+                {
+                    var gForm = new GoogleAutomationForm(_accountManager.GetAllProfiles());
+                    gForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Google:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoTikTok = _contextMenu.Items.Add("🎵 Kịch bản TikTok (FYP)");
+            itemAutoTikTok.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoTikTok.ForeColor = Color.FromArgb(15, 23, 42);
+            itemAutoTikTok.Click += (s, e) =>
+            {
+                try
+                {
+                    var ttForm = new TikTokAutomationForm(_accountManager.GetAllProfiles());
+                    ttForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto TikTok:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
 

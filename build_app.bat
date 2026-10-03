@@ -36,5 +36,5 @@ if %errorlevel% equ 0 (
     echo [THAT BAI] Co loi xay ra trong qua trinh bien dich.
 )
 
-echo.
-pause
+if "%1" neq "nopause" pause
+

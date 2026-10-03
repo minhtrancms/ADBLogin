@@ -68,6 +68,16 @@ namespace ADBLogin.Core.Services
             return driver;
         }
 
+        public IWebDriver GetSession(string profileId)
+        {
+            return GetDriver(profileId);
+        }
+
+        public List<string> GetActiveSessionIds()
+        {
+            return GetRunningProfileIds();
+        }
+
         /// <summary>
         /// Lay Remote Debugging Port (CDP) cua profile dang mo
         /// </summary>

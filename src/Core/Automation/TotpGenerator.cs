@@ -12,6 +12,11 @@ namespace ADBLogin.Core.Automation
     {
         public static string GenerateCode(string base32Secret)
         {
+            return GenerateTotpCode(base32Secret);
+        }
+
+        public static string GenerateTotpCode(string base32Secret)
+        {
             if (string.IsNullOrWhiteSpace(base32Secret))
             {
                 return string.Empty;
