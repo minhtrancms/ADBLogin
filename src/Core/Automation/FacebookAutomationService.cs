@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Leaf.xNet;
+using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
+using SeleniumCookie = OpenQA.Selenium.Cookie;
 
 namespace ADBLogin.Core.Automation
 {
@@ -93,7 +96,7 @@ namespace ADBLogin.Core.Automation
 
                         try
                         {
-                            driver.Manage().Cookies.AddCookie(new Cookie(name, val, ".facebook.com", "/", DateTime.Now.AddDays(180)));
+                            driver.Manage().Cookies.AddCookie(new SeleniumCookie(name, val, ".facebook.com", "/", DateTime.Now.AddDays(180)));
                             injected++;
                         }
                         catch
@@ -101,7 +104,7 @@ namespace ADBLogin.Core.Automation
                             // Dự phòng domain không có dấu chấm
                             try
                             {
-                                driver.Manage().Cookies.AddCookie(new Cookie(name, val, "facebook.com", "/", DateTime.Now.AddDays(180)));
+                                driver.Manage().Cookies.AddCookie(new SeleniumCookie(name, val, "facebook.com", "/", DateTime.Now.AddDays(180)));
                                 injected++;
                             }
                             catch { }
@@ -916,6 +919,233 @@ namespace ADBLogin.Core.Automation
                 DoLog(log, string.Format("[-] Lỗi khi đăng bài viết: {0}", ex.Message));
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Kết quả trích xuất bài viết từ API
+        /// </summary>
+        public class ApiPostResult
+        {
+            public bool Success { get; set; }
+            public string Content { get; set; }
+            public string ImageUrl { get; set; }
+            public string DownloadedImagePath { get; set; }
+            public string ErrorMessage { get; set; }
+        }
+
+        /// <summary>
+        /// Gọi API lấy nội dung bài viết tự động
+        /// Hỗ trợ:
+        /// 1. Plain text (chuỗi bài viết trực tiếp)
+        /// 2. JSON: tự động trích xuất các trường thông dụng (content, text, post, body, message, caption, title, quote,...)
+        /// 3. Ảnh đính kèm (nếu API có trường image, photo, img, image_url,...)
+        /// </summary>
+        public ApiPostResult FetchPostFromApi(string apiUrl, Action<string> log = null)
+        {
+            var res = new ApiPostResult();
+            if (string.IsNullOrWhiteSpace(apiUrl))
+            {
+                res.ErrorMessage = "URL API rỗng!";
+                return res;
+            }
+
+            try
+            {
+                apiUrl = apiUrl.Trim();
+                DoLog(log, string.Format("[*] Đang gửi yêu cầu lấy bài viết từ API: {0}", apiUrl));
+
+                try
+                {
+                    ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+                }
+                catch { }
+
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(apiUrl);
+                request.Method = "GET";
+                request.Timeout = 15000;
+                request.ReadWriteTimeout = 15000;
+                request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+                request.Accept = "application/json, text/plain, */*";
+
+                string rawResponse = null;
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                using (Stream stream = response.GetResponseStream())
+                {
+                    if (stream != null)
+                    {
+                        using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                        {
+                            rawResponse = reader.ReadToEnd();
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(rawResponse))
+                {
+                    res.ErrorMessage = "API trả về nội dung rỗng!";
+                    return res;
+                }
+
+                rawResponse = rawResponse.Trim();
+
+                // Kiểm tra xem có phải JSON không
+                if ((rawResponse.StartsWith("{") && rawResponse.EndsWith("}")) || (rawResponse.StartsWith("[") && rawResponse.EndsWith("]")))
+                {
+                    try
+                    {
+                        JToken token = JToken.Parse(rawResponse);
+                        JObject obj = null;
+
+                        JArray arr = token as JArray;
+                        if (arr != null && arr.Count > 0)
+                        {
+                            Random rnd = new Random();
+                            token = arr[rnd.Next(arr.Count)];
+                        }
+
+                        obj = token as JObject;
+                        if (obj != null)
+                        {
+                            JObject dataObj = obj["data"] as JObject;
+                            if (dataObj != null)
+                            {
+                                obj = dataObj;
+                            }
+                            else
+                            {
+                                JArray dataArr = obj["data"] as JArray;
+                                if (dataArr != null && dataArr.Count > 0)
+                                {
+                                    Random rnd = new Random();
+                                    var item = dataArr[rnd.Next(dataArr.Count)];
+                                    JObject itemObj = item as JObject;
+                                    if (itemObj != null) obj = itemObj;
+                                    else if (item != null) res.Content = item.ToString();
+                                }
+                            }
+                        }
+
+                        if (obj != null)
+                        {
+                            // Tìm các key thông dụng cho nội dung bài viết
+                            string[] contentKeys = new string[] {
+                                "content", "text", "post", "body", "message", "caption", "status", "quote", "title", "description", "summary"
+                            };
+
+                            foreach (var key in contentKeys)
+                            {
+                                if (obj[key] != null && !string.IsNullOrWhiteSpace(obj[key].ToString()))
+                                {
+                                    res.Content = obj[key].ToString().Trim();
+                                    break;
+                                }
+                            }
+
+                            // Tìm key ảnh đính kèm nếu có
+                            string[] imgKeys = new string[] {
+                                "image", "imageUrl", "image_url", "photo", "photoUrl", "photo_url", "picture", "thumb", "thumbnail", "media"
+                            };
+
+                            foreach (var ikey in imgKeys)
+                            {
+                                if (obj[ikey] != null && !string.IsNullOrWhiteSpace(obj[ikey].ToString()))
+                                {
+                                    string imgVal = obj[ikey].ToString().Trim();
+                                    if (imgVal.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || imgVal.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        res.ImageUrl = imgVal;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Nếu parse JSON nhưng chưa tìm thấy key quen thuộc, lấy chuỗi đầu tiên
+                        if (string.IsNullOrWhiteSpace(res.Content))
+                        {
+                            JValue val = token as JValue;
+                            if (val != null)
+                            {
+                                res.Content = val.ToString();
+                            }
+                            else if (obj != null)
+                            {
+                                foreach (var prop in obj.Properties())
+                                {
+                                    if (prop.Value.Type == JTokenType.String && !string.IsNullOrWhiteSpace(prop.Value.ToString()))
+                                    {
+                                        res.Content = prop.Value.ToString();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception jex)
+                    {
+                        DoLog(log, "[!] Phân tích JSON không thành công, sử dụng dữ liệu thô: " + jex.Message);
+                        res.Content = rawResponse;
+                    }
+                }
+                else
+                {
+                    // Plain text trực tiếp
+                    res.Content = rawResponse;
+                }
+
+                // Nếu có ảnh tải về từ API
+                if (!string.IsNullOrEmpty(res.ImageUrl))
+                {
+                    try
+                    {
+                        string tempDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp_downloads");
+                        if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
+
+                        string ext = ".jpg";
+                        try
+                        {
+                            string pathExt = Path.GetExtension(new Uri(res.ImageUrl).AbsolutePath);
+                            if (!string.IsNullOrEmpty(pathExt) && pathExt.Length <= 5) ext = pathExt;
+                        }
+                        catch { }
+
+                        string localImgPath = Path.Combine(tempDir, string.Format("fb_post_{0}_{1}{2}", DateTime.Now.Ticks, Guid.NewGuid().ToString("N").Substring(0, 6), ext));
+
+                        using (WebClient wc = new WebClient())
+                        {
+                            wc.DownloadFile(res.ImageUrl, localImgPath);
+                        }
+
+                        if (File.Exists(localImgPath) && new FileInfo(localImgPath).Length > 0)
+                        {
+                            res.DownloadedImagePath = localImgPath;
+                            DoLog(log, string.Format("[+] Đã tải ảnh từ API về: {0}", Path.GetFileName(localImgPath)));
+                        }
+                    }
+                    catch (Exception exImg)
+                    {
+                        DoLog(log, string.Format("[!] Không thể tải ảnh từ URL {0}: {1}", res.ImageUrl, exImg.Message));
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(res.Content))
+                {
+                    res.Success = true;
+                    DoLog(log, string.Format("[✓] Lấy bài viết từ API thành công! Độ dài: {0} ký tự", res.Content.Length));
+                }
+                else
+                {
+                    res.ErrorMessage = "Không thể trích xuất nội dung văn bản từ phản hồi API!";
+                    DoLog(log, "[-] " + res.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                res.ErrorMessage = ex.Message;
+                DoLog(log, string.Format("[-] Lỗi khi gọi API bài viết: {0}", ex.Message));
+            }
+
+            return res;
         }
 
         #endregion
