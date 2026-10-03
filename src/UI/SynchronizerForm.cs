@@ -109,22 +109,23 @@ namespace ADBLogin.UI
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 330,
-                SplitterWidth = 6,
+                SplitterDistance = 240, // Thu gọn tối đa cột bên trái, dồn toàn bộ không gian cho bảng điều khiển bên phải
+                Panel1MinSize = 180,
+                SplitterWidth = 5,
                 BackColor = Color.FromArgb(229, 231, 235)
             };
             this.Controls.Add(split);
             split.BringToFront();
 
             // ================= LEFT: SETUP MASTER & SLAVES =================
-            Panel pnlLeft = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
+            Panel pnlLeft = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(10) };
 
             Label lblMasterTitle = new Label
             {
-                Text = "1. CHỌN MÁY ĐIỀU KHIỂN (MASTER):",
+                Text = "1. MÁY MASTER (GỐC):",
                 Dock = DockStyle.Top,
                 Height = 22,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(79, 70, 229)
             };
 
@@ -139,10 +140,10 @@ namespace ADBLogin.UI
 
             Label lblSlavesTitle = new Label
             {
-                Text = "2. DANH SÁCH MÁY NHẬN ĐỒNG BỘ (SLAVES):",
+                Text = "2. MÁY SLAVES (ĐỒNG BỘ):",
                 Dock = DockStyle.Top,
-                Height = 28,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Height = 26,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
                 Padding = new Padding(0, 8, 0, 0)
             };
@@ -155,13 +156,13 @@ namespace ADBLogin.UI
                 WrapContents = false
             };
 
-            _btnSelectAllSlaves = new Button { Text = "Tất cả", Width = 65, Height = 25, FlatStyle = FlatStyle.Flat };
+            _btnSelectAllSlaves = new Button { Text = "Tất cả", Width = 55, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
             _btnSelectAllSlaves.Click += delegate
             {
                 for (int i = 0; i < _chkSlaves.Items.Count; i++) _chkSlaves.SetItemChecked(i, true);
             };
 
-            _btnSelectRunningSlaves = new Button { Text = "Đang chạy", Width = 80, Height = 25, FlatStyle = FlatStyle.Flat };
+            _btnSelectRunningSlaves = new Button { Text = "Đang chạy", Width = 75, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
             _btnSelectRunningSlaves.Click += delegate
             {
                 var running = BrowserSessionManager.Instance.GetActiveSessionIds();
@@ -173,7 +174,7 @@ namespace ADBLogin.UI
                 }
             };
 
-            _btnDeselectSlaves = new Button { Text = "Bỏ chọn", Width = 65, Height = 25, FlatStyle = FlatStyle.Flat };
+            _btnDeselectSlaves = new Button { Text = "Bỏ chọn", Width = 55, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
             _btnDeselectSlaves.Click += delegate
             {
                 for (int i = 0; i < _chkSlaves.Items.Count; i++) _chkSlaves.SetItemChecked(i, false);
