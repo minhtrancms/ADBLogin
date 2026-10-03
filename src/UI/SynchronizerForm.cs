@@ -22,6 +22,7 @@ namespace ADBLogin.UI
         private Button _btnDeselectSlaves;
         private Button _btnLaunchSlaves;
         private Button _btnTileWindows;
+        private SplitContainer _split;
 
         // Realtime Sync Toggle
         private Button _btnToggleRealtime;
@@ -64,6 +65,35 @@ namespace ADBLogin.UI
             base.OnFormClosing(e);
         }
 
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            UpdateSplitRatio();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateSplitRatio();
+        }
+
+        private void UpdateSplitRatio()
+        {
+            try
+            {
+                if (_split != null && _split.Width > 500 && this.WindowState != FormWindowState.Minimized)
+                {
+                    // Tỉ lệ layout 7-5: Cột trái 5 phần (~41.7%), Cột phải 7 phần (~58.3%)
+                    int target = (_split.Width * 5) / 12;
+                    if (target >= _split.Panel1MinSize && (_split.Width - target) >= _split.Panel2MinSize)
+                    {
+                        _split.SplitterDistance = target;
+                    }
+                }
+            }
+            catch { }
+        }
+
         private void InitializeComponent()
         {
             this.Text = "⚡ BỘ ĐỒNG BỘ THAO TÁC ĐA TRÌNH DUYỆT THỜI GIAN THỰC (MULTI-CONTROL SYNCHRONIZER)";
@@ -104,28 +134,29 @@ namespace ADBLogin.UI
             pnlHeader.Controls.Add(lblSubtitle);
             this.Controls.Add(pnlHeader);
 
-            // ================= 2. MAIN SPLIT =================
-            SplitContainer split = new SplitContainer
+            // ================= 2. MAIN SPLIT (LAYOUT 7-5) =================
+            _split = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 240, // Thu gọn tối đa cột bên trái, dồn toàn bộ không gian cho bảng điều khiển bên phải
-                Panel1MinSize = 180,
-                SplitterWidth = 5,
+                SplitterDistance = 485, // Layout 7-5: Bên trái 5 phần (~41.7%), bên phải 7 phần (~58.3%)
+                Panel1MinSize = 250,
+                Panel2MinSize = 400,
+                SplitterWidth = 6,
                 BackColor = Color.FromArgb(229, 231, 235)
             };
-            this.Controls.Add(split);
-            split.BringToFront();
+            this.Controls.Add(_split);
+            _split.BringToFront();
 
             // ================= LEFT: SETUP MASTER & SLAVES =================
-            Panel pnlLeft = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(10) };
+            Panel pnlLeft = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
 
             Label lblMasterTitle = new Label
             {
                 Text = "1. MÁY MASTER (GỐC):",
                 Dock = DockStyle.Top,
-                Height = 22,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Height = 24,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(79, 70, 229)
             };
 
@@ -142,8 +173,8 @@ namespace ADBLogin.UI
             {
                 Text = "2. MÁY SLAVES (ĐỒNG BỘ):",
                 Dock = DockStyle.Top,
-                Height = 26,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Height = 28,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
                 Padding = new Padding(0, 8, 0, 0)
             };
@@ -156,13 +187,13 @@ namespace ADBLogin.UI
                 WrapContents = false
             };
 
-            _btnSelectAllSlaves = new Button { Text = "Tất cả", Width = 55, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
+            _btnSelectAllSlaves = new Button { Text = "Tất cả", Width = 70, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F) };
             _btnSelectAllSlaves.Click += delegate
             {
                 for (int i = 0; i < _chkSlaves.Items.Count; i++) _chkSlaves.SetItemChecked(i, true);
             };
 
-            _btnSelectRunningSlaves = new Button { Text = "Đang chạy", Width = 75, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
+            _btnSelectRunningSlaves = new Button { Text = "Đang chạy", Width = 95, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F) };
             _btnSelectRunningSlaves.Click += delegate
             {
                 var running = BrowserSessionManager.Instance.GetActiveSessionIds();
@@ -174,7 +205,7 @@ namespace ADBLogin.UI
                 }
             };
 
-            _btnDeselectSlaves = new Button { Text = "Bỏ chọn", Width = 55, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
+            _btnDeselectSlaves = new Button { Text = "Bỏ chọn", Width = 70, Height = 25, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F) };
             _btnDeselectSlaves.Click += delegate
             {
                 for (int i = 0; i < _chkSlaves.Items.Count; i++) _chkSlaves.SetItemChecked(i, false);
@@ -230,7 +261,7 @@ namespace ADBLogin.UI
             pnlLeft.Controls.Add(lblSlavesTitle);
             pnlLeft.Controls.Add(_cboMaster);
             pnlLeft.Controls.Add(lblMasterTitle);
-            split.Panel1.Controls.Add(pnlLeft);
+            _split.Panel1.Controls.Add(pnlLeft);
 
             // ================= RIGHT: REALTIME SYNC & COMMANDS =================
             Panel pnlRight = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
@@ -447,7 +478,7 @@ namespace ADBLogin.UI
             grpManual.BringToFront();
             grpRealtime.BringToFront();
 
-            split.Panel2.Controls.Add(pnlRight);
+            _split.Panel2.Controls.Add(pnlRight);
         }
 
         private void LoadProfiles()
