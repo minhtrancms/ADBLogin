@@ -1,0 +1,28 @@
+============================================================
+       HƯỚNG DẪN CẬP NHẬT ADBLOGIN LÊN PHIÊN BẢN v2.0
+============================================================
+
+Để cập nhật ADBLogin và kích hoạt bản quyền vĩnh viễn (Offline-First),
+quý khách vui lòng thực hiện theo 1 trong 2 cách sau:
+
+--- CÁCH 1: CẬP NHẬT TỰ ĐỘNG BẰNG 1 CÚ CLICK (KHUYÊN DÙNG) ---
+1. Tải về và giải nén 2 file sau vào thư mục cài đặt ADBLogin hiện tại:
+   - Update_ADBLogin.bat
+   - ADBLogin_Update.exe
+
+2. Nhấp đúp chuột vào file: Update_ADBLogin.bat
+   (Nếu máy tính yêu cầu quyền, chọn "Run as administrator")
+
+3. Công cụ sẽ tự động đóng ứng dụng cũ, tạo bản sao lưu và nâng cấp.
+   Khi màn hình báo "CẬP NHẬT HOÀN TẤT", bạn có thể mở ADBLogin lên sử dụng.
+
+
+--- CÁCH 2: CẬP NHẬT THỦ CÔNG ---
+1. Tắt hoàn toàn phần mềm ADBLogin (nếu đang mở).
+2. Tìm file "ADBLogin.exe" trong thư mục và đổi tên thành "ADBLogin_Backup.exe".
+3. Đổi tên file "ADBLogin_Update.exe" thành "ADBLogin.exe".
+4. Khởi động lại phần mềm ADBLogin.exe để trải nghiệm phiên bản mới.
+
+============================================================
+Chúc quý khách có trải nghiệm tuyệt vời với phiên bản v2.0!
+============================================================

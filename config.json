@@ -1,0 +1,16 @@
+{
+  "IsOfflineMode": true,
+  "SkipServerAuthentication": true,
+  "AllowAutoUpdateCheck": false,
+  "LicenseKey": "STANDALONE_LIFETIME_ACCESS",
+  "LicenseStatus": "Activated",
+  "PlanName": "Enterprise Unlimited",
+  "ActivationDate": "2026-10-03T00:00:00",
+  "SuppressNotificationPopups": true,
+  "EnableCoffeePromotionPopup": false,
+  "ShowFreeTierWarnings": false,
+  "ProfilesDirectory": "Files/zero_profile",
+  "ProxiesFilePath": "Files/Proxy.txt",
+  "UserAgentFilePath": "Files/UserAgent.txt",
+  "MaxConcurrentBrowsers": 50
+}

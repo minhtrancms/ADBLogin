@@ -1,0 +1,1 @@
+(()=>{"use strict";(()=>{const e=setInterval((()=>{document.querySelector("textarea[name=h-captcha-response]")&&clearInterval(e)}),2e3)})()})();

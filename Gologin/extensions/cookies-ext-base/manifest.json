@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "Gologin",
+  "version": "0.5.2.1",
+  "description": "",
+
+  "permissions": [
+    "clipboardRead",
+    "contextMenus",
+    "cookies",
+    "downloads",
+    "management",
+    "notifications",
+    "privacy",
+    "scripting",
+    "storage",
+    "tabs",
+    "webNavigation",
+    "webRequest",
+    "webRequestBlocking"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "./src/background.js"
+  },
+
+  "content_scripts": [{
+    "matches": ["https://*/*"],
+    "js": ["./src/content.js"],
+    "run_at": "document_end"
+  }],
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "commands": {
+    "humanTyping": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac":  "Alt+Shift+F"
+      },
+      "description": "Paste like typing"
+    },
+
+    "automationTask": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Q",
+        "mac":  "Alt+Shift+Q"
+      },
+      "description": "Activate test operation"
+    }
+
+  },
+
+  "web_accessible_resources": [{
+    "resources": ["*"],
+    "use_dynamic_url": true
+  }]
+}

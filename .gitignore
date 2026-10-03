@@ -1,0 +1,21 @@
+# Build and Binary outputs
+bin/
+obj/
+*.log
+*.tmp
+ADBLogin_Backup.exe
+
+# Large browser installer archives (over GitHub 100MB limit)
+Gologin/All-Browsers/
+*.zip
+
+# User Profiles and Session Data
+Files/Profiles/
+
+# IDE / VS Files
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates

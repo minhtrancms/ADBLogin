@@ -1,0 +1,15 @@
+ForceUpdateProxy=https://adblogin.com/format-proxy/
+UpdateTimezone=https://adblogin.com/format-proxy/
+ProxyType=https://adblogin.com/format-proxy/
+CheckLiveProxy=https://adblogin.com/format-proxy/
+CreateNewProfiles=https://adblogin.com/vn/
+DeleteProfile=https://adblogin.com/vn/
+LoadExtension=https://adblogin.com/vn/
+StartServer=https://adblogin.com/api-documentation/
+APIToken=https://adblogin.com/format-proxy/
+SaveAndDeleteProfile=https://adblogin.com/vn/
+UserAgent=https://adblogin.com/vn/
+AboutCanvas=https://adblogin.com/format-proxy/
+AboutClientRect=https://adblogin.com/format-proxy/
+AboutWebGLImage=https://adblogin.com/format-proxy/
+AboutWebRTC=https://adblogin.com/format-proxy/
