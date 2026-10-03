@@ -363,7 +363,10 @@ namespace ADBLogin.UI
                 Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = isPrimary ? 0 : 1;
-            btn.FlatAppearance.BorderColor = isPrimary ? Color.Transparent : Color.FromArgb(209, 213, 219);
+            if (!isPrimary)
+            {
+                btn.FlatAppearance.BorderColor = Color.FromArgb(209, 213, 219);
+            }
 
             if (hoverColor.HasValue)
             {
@@ -603,7 +606,10 @@ namespace ADBLogin.UI
                     {
                         LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion = ofd.FileName;
                         LocalConfigManager.Instance.SaveConfig();
-                        _lblStatus.Text = string.Format("Đã chọn trình duyệt tùy chỉnh: {0}", Path.GetFileName(ofd.FileName));
+                        if (_lblStatus != null)
+                        {
+                            _lblStatus.Text = string.Format("Đã chọn trình duyệt tùy chỉnh: {0}", Path.GetFileName(ofd.FileName));
+                        }
                     }
                     else
                     {
@@ -615,7 +621,10 @@ namespace ADBLogin.UI
             {
                 LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion = selected.VersionKey;
                 LocalConfigManager.Instance.SaveConfig();
-                _lblStatus.Text = string.Format("Đã chuyển phiên bản trình duyệt mặc định: {0}", selected.DisplayName);
+                if (_lblStatus != null)
+                {
+                    _lblStatus.Text = string.Format("Đã chuyển phiên bản trình duyệt mặc định: {0}", selected.DisplayName);
+                }
             }
         }
 
@@ -1067,9 +1076,21 @@ namespace ADBLogin.UI
         [STAThread]
         public static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new MainForm());
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), ex.ToString());
+                    MessageBox.Show(string.Format("Lỗi khởi chạy ứng dụng:\n{0}", ex.Message), "ADBLogin - Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch { }
+            }
         }
     }
 }
