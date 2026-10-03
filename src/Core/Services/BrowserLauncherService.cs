@@ -33,17 +33,30 @@ namespace ADBLogin.Core.Services
                 }
             }
 
-            // 2. Cap nhat Proxy neu duoc thiet lap
-            if (!string.IsNullOrEmpty(profile.Proxy))
+            // 2. Tự động chuẩn hóa User-Agent tương thích phiên bản Orbita (Tránh lỗi Chrome cũ trên Google/Gmail)
+            string globalSetting = LocalConfigManager.Instance.CurrentConfig != null ? LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion : "144";
+            string activeVer = ExtractNumericVersion(!string.IsNullOrEmpty(profile.BrowserVersion) ? profile.BrowserVersion : globalSetting);
+
+            string effectiveUA;
+            if (isMobileMode)
             {
-                ProxySettings proxy = ProxySettings.Parse(profile.Proxy);
-                _prefService.UpdatePreferences(profileDir, proxy, profile.UserAgent);
+                effectiveUA = !string.IsNullOrEmpty(profile.UserAgent) && profile.UserAgent.Contains("Mobile") && !IsObsoleteUA(profile.UserAgent)
+                    ? profile.UserAgent
+                    : string.Format("Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{0}.0.0.0 Mobile Safari/537.36", activeVer);
             }
+            else
+            {
+                effectiveUA = !string.IsNullOrEmpty(profile.UserAgent) && !IsObsoleteUA(profile.UserAgent)
+                    ? profile.UserAgent
+                    : string.Format("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{0}.0.0.0 Safari/537.36", activeVer);
+            }
+
+            ProxySettings proxy = !string.IsNullOrEmpty(profile.Proxy) ? ProxySettings.Parse(profile.Proxy) : null;
+            _prefService.UpdatePreferences(profileDir, proxy, effectiveUA);
 
             // 3. Cau hinh ChromeOptions
             var options = new ChromeOptions();
 
-            string globalSetting = LocalConfigManager.Instance.CurrentConfig != null ? LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion : "144";
             string resolvedBrowser = BrowserVersionService.ResolveBrowserBinary(browserBinaryPath, profile.BrowserVersion, globalSetting);
             if (!string.IsNullOrEmpty(resolvedBrowser) && File.Exists(resolvedBrowser))
             {
@@ -54,13 +67,9 @@ namespace ADBLogin.Core.Services
             options.AddArgument(string.Format("--user-data-dir={0}", profileDir));
 
             // Cau hinh Proxy qua CLI neu co
-            if (!string.IsNullOrEmpty(profile.Proxy))
+            if (proxy != null && proxy.IsEnabled)
             {
-                ProxySettings proxy = ProxySettings.Parse(profile.Proxy);
-                if (proxy.IsEnabled)
-                {
-                    options.AddArgument(string.Format("--proxy-server={0}://{1}:{2}", proxy.Protocol.ToString().ToLower(), proxy.Host, proxy.Port));
-                }
+                options.AddArgument(string.Format("--proxy-server={0}://{1}:{2}", proxy.Protocol.ToString().ToLower(), proxy.Host, proxy.Port));
             }
 
             // ================= KỸ THUẬT SYSTEM SCALE FACTOR (CHUẨN PHONE FARM DÀI) =================
@@ -87,12 +96,7 @@ namespace ADBLogin.Core.Services
                 mobileHeight = Math.Min(720, screenArea.Height - 40);
 
                 options.AddArgument(string.Format("--window-size={0},{1}", mobileWidth, mobileHeight));
-
-                // Giả lập User-Agent Smartphone hiện đại
-                string mobileUA = !string.IsNullOrEmpty(profile.UserAgent) && profile.UserAgent.Contains("Mobile")
-                    ? profile.UserAgent
-                    : "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
-                options.AddArgument(string.Format("--user-agent={0}", mobileUA));
+                options.AddArgument(string.Format("--user-agent={0}", effectiveUA));
 
                 // Định vị cửa sổ theo đúng cột và hàng
                 if (windowIndex >= 0)
@@ -110,10 +114,7 @@ namespace ADBLogin.Core.Services
             else
             {
                 // Che do Desktop tieu chuan
-                if (!string.IsNullOrEmpty(profile.UserAgent))
-                {
-                    options.AddArgument(string.Format("--user-agent={0}", profile.UserAgent));
-                }
+                options.AddArgument(string.Format("--user-agent={0}", effectiveUA));
 
                 if (windowIndex >= 0)
                 {
@@ -167,6 +168,28 @@ namespace ADBLogin.Core.Services
             BrowserSessionManager.Instance.RegisterSession(profile.ProfileId, driver);
 
             return driver;
+        }
+
+        private static bool IsObsoleteUA(string ua)
+        {
+            if (string.IsNullOrWhiteSpace(ua)) return true;
+            var match = System.Text.RegularExpressions.Regex.Match(ua, @"Chrome/(\d+)");
+            if (match.Success)
+            {
+                int ver;
+                if (int.TryParse(match.Groups[1].Value, out ver))
+                {
+                    return ver < 130;
+                }
+            }
+            return false;
+        }
+
+        private static string ExtractNumericVersion(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return "144";
+            var match = System.Text.RegularExpressions.Regex.Match(input, @"\d+");
+            return match.Success ? match.Value : "144";
         }
     }
 }
