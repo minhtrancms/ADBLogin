@@ -16,7 +16,7 @@ namespace ADBLogin.Tests
             Console.WriteLine("[TEST 1] Testing TotpGenerator & SpintaxHelper...");
             string otp = TotpGenerator.GenerateTotpCode("JBSWY3DPEHPK3PXP");
             Console.WriteLine("  -> TOTP: " + otp);
-            string spun = SpintaxHelper.Spin("{Shopee|Twitter|Telegram} Automation!");
+            string spun = SpintaxHelper.Spin("{Shopee|Twitter|Telegram|Discord|Instagram|Lazada} Automation!");
             Console.WriteLine("  -> Spun: " + spun);
 
             var profiles = new List<UserProfile>
@@ -43,18 +43,35 @@ namespace ADBLogin.Tests
             Console.WriteLine("[TEST 7] Instantiating TelegramAutomationForm...");
             using (var f = new TelegramAutomationForm(profiles)) { IntPtr h = f.Handle; Console.WriteLine("  -> Telegram Form Handle: " + h); }
 
-            Console.WriteLine("[TEST 8] Instantiating SynchronizerForm...");
+            Console.WriteLine("[TEST 8] Instantiating DiscordAutomationForm...");
+            using (var f = new DiscordAutomationForm(profiles)) { IntPtr h = f.Handle; Console.WriteLine("  -> Discord Form Handle: " + h); }
+
+            Console.WriteLine("[TEST 9] Instantiating InstagramAutomationForm...");
+            using (var f = new InstagramAutomationForm(profiles)) { IntPtr h = f.Handle; Console.WriteLine("  -> Instagram Form Handle: " + h); }
+
+            Console.WriteLine("[TEST 10] Instantiating LazadaAutomationForm...");
+            using (var f = new LazadaAutomationForm(profiles)) { IntPtr h = f.Handle; Console.WriteLine("  -> Lazada Form Handle: " + h); }
+
+            Console.WriteLine("[TEST 11] Instantiating SchedulerManagerForm & AutomationSchedulerService...");
+            var schedService = AutomationSchedulerService.Instance;
+            Console.WriteLine("  -> Scheduler loaded tasks count: " + schedService.GetAllTasks().Count);
+            using (var f = new SchedulerManagerForm()) { IntPtr h = f.Handle; Console.WriteLine("  -> Scheduler Form Handle: " + h); }
+
+            Console.WriteLine("[TEST 12] Instantiating BatchAccountImporterForm...");
+            using (var f = new BatchAccountImporterForm()) { IntPtr h = f.Handle; Console.WriteLine("  -> Batch Importer Form Handle: " + h); }
+
+            Console.WriteLine("[TEST 13] Instantiating SynchronizerForm...");
             using (var f = new SynchronizerForm(profiles)) { IntPtr h = f.Handle; Console.WriteLine("  -> Synchronizer Form Handle: " + h); }
 
-            Console.WriteLine("[TEST 9] Instantiating AdvancedSettingsForm...");
+            Console.WriteLine("[TEST 14] Instantiating AdvancedSettingsForm...");
             using (var f = new AdvancedSettingsForm()) { IntPtr h = f.Handle; Console.WriteLine("  -> Advanced Settings Form Handle: " + h); }
 
-            Console.WriteLine("[TEST 10] Testing ProxyRotatorService & CaptchaSolverService initializations...");
+            Console.WriteLine("[TEST 15] Testing ProxyRotatorService & CaptchaSolverService...");
             var rotator = new ProxyRotatorService();
             var captcha = new CaptchaSolverService();
-            Console.WriteLine("  -> Services initialized successfully!");
+            Console.WriteLine("  -> Rotator & Captcha services initialized successfully!");
 
-            Console.WriteLine("[TEST 11] Instantiating MainForm (2-Tier UI Toolbar)...");
+            Console.WriteLine("[TEST 16] Instantiating MainForm (Complete 2-Tier UI Toolbar & All Suites)...");
             using (var f = new MainForm())
             {
                 IntPtr h = f.Handle;
@@ -62,7 +79,7 @@ namespace ADBLogin.Tests
             }
 
             Console.WriteLine("\n=======================================================");
-            Console.WriteLine("  [ALL 11 TESTS PASSED WITH 100% SUCCESSFUL INITIALIZATION!]");
+            Console.WriteLine("  [ALL 16 TESTS PASSED WITH 100% SUCCESSFUL INITIALIZATION!]");
             Console.WriteLine("=======================================================");
         }
     }

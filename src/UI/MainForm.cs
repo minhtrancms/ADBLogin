@@ -38,6 +38,9 @@ namespace ADBLogin.UI
         private Button _btnShopeeAuto;
         private Button _btnTwitterAuto;
         private Button _btnTelegramAuto;
+        private Button _btnMoreAuto;
+        private Button _btnScheduler;
+        private Button _btnBatchImport;
         private Button _btnSync;
         private Button _btnAdvSettings;
 
@@ -183,6 +186,18 @@ namespace ADBLogin.UI
             _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(99, 102, 241), Color.White, 84, true, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(79, 70, 229));
             _btnAutoCreate.Click += BtnAutoCreate_Click;
 
+            _btnBatchImport = CreateCompactButton("📥 Nhập Pro", Color.FromArgb(16, 185, 129), Color.White, 78, true, "Nhập tài khoản hàng loạt theo định dạng UID|Pass|2FA|Email|Proxy", Color.FromArgb(5, 150, 105));
+            _btnBatchImport.Click += (s, e) =>
+            {
+                using (var impForm = new BatchAccountImporterForm())
+                {
+                    if (impForm.ShowDialog(this) == DialogResult.OK)
+                    {
+                        LoadData();
+                    }
+                }
+            };
+
             _btnAdd = CreateCompactButton("+ Thêm", Color.FromArgb(37, 99, 235), Color.White, 58, true, "Thêm một profile mới thủ công", Color.FromArgb(29, 78, 216));
             _btnAdd.Click += BtnAdd_Click;
 
@@ -261,6 +276,7 @@ namespace ADBLogin.UI
             pnlProfileBar.Controls.Add(_btnStopAll);
             pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(_btnAutoCreate);
+            pnlProfileBar.Controls.Add(_btnBatchImport);
             pnlProfileBar.Controls.Add(_btnAdd);
             pnlProfileBar.Controls.Add(_btnEdit);
             pnlProfileBar.Controls.Add(_btnDelete);
@@ -388,6 +404,56 @@ namespace ADBLogin.UI
                 }
             };
 
+            _btnMoreAuto = CreateCompactButton("🌐 Thêm ▼", Color.FromArgb(139, 92, 246), Color.White, 78, true, "Mở thêm kịch bản Discord, Instagram, Lazada", Color.FromArgb(124, 58, 237));
+            _btnMoreAuto.Click += (s, e) =>
+            {
+                var menu = new ContextMenuStrip();
+                menu.Font = new Font("Segoe UI", 9F);
+
+                var itemDiscord = menu.Items.Add("👾 Auto Discord (Join Server & Leveling)");
+                itemDiscord.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                itemDiscord.ForeColor = Color.FromArgb(88, 101, 242);
+                itemDiscord.Click += (s2, e2) =>
+                {
+                    try { new DiscordAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                };
+
+                var itemInsta = menu.Items.Add("📸 Auto Instagram (Nuôi Feed & Reels)");
+                itemInsta.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                itemInsta.ForeColor = Color.FromArgb(193, 53, 132);
+                itemInsta.Click += (s2, e2) =>
+                {
+                    try { new InstagramAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                };
+
+                var itemLazada = menu.Items.Add("🛍️ Auto Lazada (LazCoins & Voucher)");
+                itemLazada.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                itemLazada.ForeColor = Color.FromArgb(15, 23, 42);
+                itemLazada.Click += (s2, e2) =>
+                {
+                    try { new LazadaAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                };
+
+                menu.Show(_btnMoreAuto, new Point(0, _btnMoreAuto.Height));
+            };
+
+            _btnScheduler = CreateCompactButton("⏰ Lập Lịch", Color.FromArgb(16, 185, 129), Color.White, 78, true, "Bộ Quản Lý Lập Lịch Tự Động & Hàng Đợi Tác Vụ Background", Color.FromArgb(5, 150, 105));
+            _btnScheduler.Click += (s, e) =>
+            {
+                try
+                {
+                    var schedForm = new SchedulerManagerForm();
+                    schedForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở Lập Lịch:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
             _btnSync = CreateCompactButton("⚡ Đồng Bộ (Sync)", Color.FromArgb(99, 102, 241), Color.White, 105, true, "Đồng bộ thao tác chuột & phím từ 1 Master sang hàng loạt Slaves", Color.FromArgb(79, 70, 229));
             _btnSync.Click += (s, e) =>
             {
@@ -423,6 +489,9 @@ namespace ADBLogin.UI
             pnlAutomationBar.Controls.Add(_btnShopeeAuto);
             pnlAutomationBar.Controls.Add(_btnTwitterAuto);
             pnlAutomationBar.Controls.Add(_btnTelegramAuto);
+            pnlAutomationBar.Controls.Add(_btnMoreAuto);
+            pnlAutomationBar.Controls.Add(CreateDivider());
+            pnlAutomationBar.Controls.Add(_btnScheduler);
             pnlAutomationBar.Controls.Add(CreateDivider());
             pnlAutomationBar.Controls.Add(_btnSync);
             pnlAutomationBar.Controls.Add(_btnAdvSettings);
@@ -907,6 +976,86 @@ namespace ADBLogin.UI
                     MessageBox.Show(string.Format("Lỗi mở giao diện Auto Telegram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
+
+            var itemAutoDiscord = _contextMenu.Items.Add("👾 Kịch bản Discord (Auto Join & Cày Cấp)");
+            itemAutoDiscord.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoDiscord.ForeColor = Color.FromArgb(88, 101, 242);
+            itemAutoDiscord.Click += (s, e) =>
+            {
+                try
+                {
+                    var dcForm = new DiscordAutomationForm(_accountManager.GetAllProfiles());
+                    dcForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Discord:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoInstagram = _contextMenu.Items.Add("📸 Kịch bản Instagram (Nuôi Feed & Reels)");
+            itemAutoInstagram.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoInstagram.ForeColor = Color.FromArgb(193, 53, 132);
+            itemAutoInstagram.Click += (s, e) =>
+            {
+                try
+                {
+                    var instaForm = new InstagramAutomationForm(_accountManager.GetAllProfiles());
+                    instaForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Instagram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoLazada = _contextMenu.Items.Add("🛍️ Kịch bản Lazada (LazCoins & Voucher)");
+            itemAutoLazada.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoLazada.ForeColor = Color.FromArgb(15, 23, 42);
+            itemAutoLazada.Click += (s, e) =>
+            {
+                try
+                {
+                    var lzForm = new LazadaAutomationForm(_accountManager.GetAllProfiles());
+                    lzForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Lazada:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemScheduler = _contextMenu.Items.Add("⏰ Quản Lý Lập Lịch (Scheduler)");
+            itemScheduler.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemScheduler.ForeColor = Color.FromArgb(16, 185, 129);
+            itemScheduler.Click += (s, e) =>
+            {
+                try
+                {
+                    var scForm = new SchedulerManagerForm();
+                    scForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Lập Lịch:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemBatch = _contextMenu.Items.Add("📥 Nhập Nick Hàng Loạt (Batch Importer Pro)");
+            itemBatch.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemBatch.ForeColor = Color.FromArgb(16, 185, 129);
+            itemBatch.Click += (s, e) =>
+            {
+                using (var imp = new BatchAccountImporterForm())
+                {
+                    if (imp.ShowDialog(this) == DialogResult.OK)
+                    {
+                        LoadData();
+                    }
+                }
+            };
+
+            _contextMenu.Items.Add(new ToolStripSeparator());
 
             var itemSync = _contextMenu.Items.Add("⚡ Đồng Bộ Chuột & Phím (Synchronizer)");
             itemSync.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
