@@ -14,7 +14,7 @@ namespace ADBLogin.Core.Services
         /// <summary>
         /// Tao mot profile hoan chinh tren o dia tu mau zero_profile
         /// </summary>
-        public UserProfile CreateProfile(string baseFolder, string profileName, string proxy = "", string userAgent = "", string note = "")
+        public UserProfile CreateProfile(string baseFolder, string profileName, string proxy = "", string userAgent = "", string note = "", string browserVersion = "")
         {
             if (string.IsNullOrEmpty(baseFolder))
             {
@@ -56,11 +56,13 @@ namespace ADBLogin.Core.Services
             // 3. Tao ID profile duy nhat (24 ky tu hex)
             string profileId = Guid.NewGuid().ToString("N").Substring(0, 24);
 
+            string targetVer = !string.IsNullOrEmpty(browserVersion) ? browserVersion : "144";
+
             // 4. Ghi cac tep thong tin chuan ADBLogin
             File.WriteAllText(Path.Combine(profileDir, "profile.txt"), profileId);
             File.WriteAllText(Path.Combine(profileDir, "proxy.txt"), string.IsNullOrEmpty(proxy) ? "none::::" : proxy);
             File.WriteAllText(Path.Combine(profileDir, "note.txt"), note ?? "");
-            File.WriteAllText(Path.Combine(profileDir, "version.txt"), "144");
+            File.WriteAllText(Path.Combine(profileDir, "version.txt"), targetVer);
 
             // 5. Cap nhat Preferences cua Chromium
             ProxySettings proxySettings = ProxySettings.Parse(proxy);
@@ -79,6 +81,7 @@ namespace ADBLogin.Core.Services
                 Proxy = proxy,
                 UserAgent = userAgent,
                 BrowserPath = profileDir,
+                BrowserVersion = targetVer,
                 Notes = note
             };
 

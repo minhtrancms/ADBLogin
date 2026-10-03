@@ -25,7 +25,7 @@ if not exist "%CSC%" (
 )
 
 echo [*] Dang bien dich ADBLogin.exe...
-"%CSC%" /nologo /target:winexe /out:ADBLogin.exe /r:System.Windows.Forms.dll,System.Drawing.dll,Newtonsoft.Json.dll,WebDriver.dll,Leaf.xNet.dll,Faker.dll,"%NETSTANDARD%" src\Core\Models\*.cs src\Core\Services\*.cs src\UI\*.cs
+"%CSC%" /nologo /target:winexe /out:ADBLogin.exe /r:System.Windows.Forms.dll,System.Drawing.dll,System.IO.Compression.dll,System.IO.Compression.FileSystem.dll,Newtonsoft.Json.dll,WebDriver.dll,Leaf.xNet.dll,Faker.dll,"%NETSTANDARD%" src\Core\Models\*.cs src\Core\Services\*.cs src\UI\*.cs
 
 if %errorlevel% equ 0 (
     copy /y ADBLogin.exe ADBLogin_Update.exe >nul

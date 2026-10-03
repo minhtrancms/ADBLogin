@@ -22,6 +22,7 @@ namespace ADBLogin.Core.Models
         public string Proxy { get; set; }
         public string UserAgent { get; set; }
         public string BrowserPath { get; set; }
+        public string BrowserVersion { get; set; }
         public string Notes { get; set; }
 
         public UserProfile()
@@ -36,6 +37,7 @@ namespace ADBLogin.Core.Models
             Proxy = string.Empty;
             UserAgent = string.Empty;
             BrowserPath = string.Empty;
+            BrowserVersion = string.Empty;
             Notes = string.Empty;
         }
 

@@ -36,6 +36,7 @@ namespace ADBLogin.UI
         private NumericUpDown _numRows;
         private NumericUpDown _numCols;
         private CheckBox _chkMobileMode;
+        private ComboBox _cboBrowserVersion;
 
         private System.Windows.Forms.Timer _statusTimer;
         private ContextMenuStrip _contextMenu;
@@ -231,6 +232,20 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(_btnAdd);
             toolPanel.Controls.Add(_btnEdit);
             toolPanel.Controls.Add(_btnDelete);
+            // Bộ chọn phiên bản Chrome / Orbita
+            Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            _cboBrowserVersion = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 145,
+                Height = 24,
+                Font = new Font("Segoe UI", 8.5F),
+                Cursor = Cursors.Hand
+            };
+            toolTip.SetToolTip(_cboBrowserVersion, "Chọn phiên bản lõi Chrome / Orbita sử dụng để mở profile");
+            PopulateBrowserVersions();
+            _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
+
             toolPanel.Controls.Add(_btnOpenFolder);
             toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(_btnCheckProxy);
@@ -244,6 +259,9 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(lblRowUnit);
             toolPanel.Controls.Add(_numCols);
             toolPanel.Controls.Add(lblColUnit);
+            toolPanel.Controls.Add(CreateDivider());
+            toolPanel.Controls.Add(lblBrowser);
+            toolPanel.Controls.Add(_cboBrowserVersion);
 
             LayoutCompactToolbar(toolPanel);
 
@@ -390,6 +408,11 @@ namespace ADBLogin.UI
                     c.Location = new Point(currentX, 13);
                     currentX += c.Width + gap;
                 }
+                else if (c is ComboBox)
+                {
+                    c.Location = new Point(currentX, 10);
+                    currentX += c.Width + gap;
+                }
             }
         }
 
@@ -516,6 +539,63 @@ namespace ADBLogin.UI
             }
 
             _lblStatsRunning.Text = string.Format("Đang mở: {0}", runningCount);
+        }
+
+        private void PopulateBrowserVersions()
+        {
+            _cboBrowserVersion.Items.Clear();
+            var browsers = BrowserVersionService.GetAvailableBrowsers();
+            string savedSetting = LocalConfigManager.Instance.CurrentConfig != null ? LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion : "144";
+
+            int selectedIndex = 0;
+            for (int i = 0; i < browsers.Count; i++)
+            {
+                var b = browsers[i];
+                _cboBrowserVersion.Items.Add(b);
+
+                if (!string.IsNullOrEmpty(savedSetting) &&
+                    (b.DisplayName.IndexOf(savedSetting, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     b.VersionKey.Equals(savedSetting, StringComparison.OrdinalIgnoreCase)))
+                {
+                    selectedIndex = i;
+                }
+            }
+
+            if (_cboBrowserVersion.Items.Count > 0)
+            {
+                _cboBrowserVersion.SelectedIndex = selectedIndex;
+            }
+        }
+
+        private void CboBrowserVersion_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selected = _cboBrowserVersion.SelectedItem as BrowserVersionInfo;
+            if (selected == null) return;
+
+            if (selected.VersionKey == "custom")
+            {
+                using (var ofd = new OpenFileDialog())
+                {
+                    ofd.Title = "Chọn file thực thi Chrome / Orbita (chrome.exe)";
+                    ofd.Filter = "Trình duyệt (*.exe)|*.exe|Tất cả tệp (*.*)|*.*";
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion = ofd.FileName;
+                        LocalConfigManager.Instance.SaveConfig();
+                        _lblStatus.Text = string.Format("Đã chọn trình duyệt tùy chỉnh: {0}", Path.GetFileName(ofd.FileName));
+                    }
+                    else
+                    {
+                        PopulateBrowserVersions();
+                    }
+                }
+            }
+            else
+            {
+                LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion = selected.VersionKey;
+                LocalConfigManager.Instance.SaveConfig();
+                _lblStatus.Text = string.Format("Đã chuyển phiên bản trình duyệt mặc định: {0}", selected.DisplayName);
+            }
         }
 
         private void InitializeContextMenu()

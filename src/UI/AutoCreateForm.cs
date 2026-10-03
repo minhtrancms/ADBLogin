@@ -12,6 +12,7 @@ namespace ADBLogin.UI
     public class AutoCreateForm : Form
     {
         private NumericUpDown _numCount;
+        private ComboBox _cboBrowserVersion;
         private TextBox _txtPrefix;
         private CheckBox _chkUseFakerEmail;
         private TextBox _txtFolder;
@@ -73,9 +74,28 @@ namespace ADBLogin.UI
             int inputX = 160;
             int inputWidth = 430;
 
-            // 1. Số lượng cần tạo
+            // 1. Số lượng cần tạo & Phiên bản Chrome
             Label lblCount = new Label { Text = "Số lượng Profile:", Location = new Point(labelX, 85), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(51, 65, 85) };
-            _numCount = new NumericUpDown { Location = new Point(inputX, 83), Width = 110, Minimum = 1, Maximum = 1000, Value = 5, Font = new Font("Segoe UI", 10F) };
+            _numCount = new NumericUpDown { Location = new Point(inputX, 83), Width = 70, Minimum = 1, Maximum = 1000, Value = 5, Font = new Font("Segoe UI", 10F) };
+
+            Label lblBrowser = new Label { Text = "Lõi Chrome:", Location = new Point(inputX + 85, 85), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(51, 65, 85) };
+            _cboBrowserVersion = new ComboBox
+            {
+                Location = new Point(inputX + 175, 82),
+                Width = 255,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9F)
+            };
+            _cboBrowserVersion.Items.Add("Orbita 144 (Mặc định)");
+            var availableBrowsers = BrowserVersionService.GetAvailableBrowsers();
+            foreach (var b in availableBrowsers)
+            {
+                if (b.VersionKey != "custom" && b.DisplayName != "Orbita 144 (Mặc định)")
+                {
+                    _cboBrowserVersion.Items.Add(b.DisplayName);
+                }
+            }
+            _cboBrowserVersion.SelectedIndex = 0;
 
             // 2. Thư mục lưu
             Label lblFolder = new Label { Text = "Thư mục lưu:", Location = new Point(labelX, 125), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(51, 65, 85) };
@@ -160,6 +180,8 @@ namespace ADBLogin.UI
             this.Controls.Add(header);
             this.Controls.Add(lblCount);
             this.Controls.Add(_numCount);
+            this.Controls.Add(lblBrowser);
+            this.Controls.Add(_cboBrowserVersion);
             this.Controls.Add(lblFolder);
             this.Controls.Add(_txtFolder);
             this.Controls.Add(_btnBrowseFolder);
@@ -226,6 +248,8 @@ namespace ADBLogin.UI
             _progressBar.Maximum = total;
             _progressBar.Value = 0;
 
+            string selectedBrowserVer = _cboBrowserVersion.SelectedItem != null ? _cboBrowserVersion.SelectedItem.ToString() : "144";
+
             ThreadPool.QueueUserWorkItem((state) =>
             {
                 int success = 0;
@@ -256,7 +280,7 @@ namespace ADBLogin.UI
 
                     try
                     {
-                        var newProfile = _builderService.CreateProfile(targetFolder, profileName, proxy, ua, note);
+                        var newProfile = _builderService.CreateProfile(targetFolder, profileName, proxy, ua, note, selectedBrowserVer);
                         _accountManager.AddOrUpdateProfile(newProfile);
                         success++;
                     }

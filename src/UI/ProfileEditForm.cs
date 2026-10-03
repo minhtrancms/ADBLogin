@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using ADBLogin.Core.Models;
 
@@ -13,6 +14,7 @@ namespace ADBLogin.UI
         private TextBox _txtProxy;
         private TextBox _txtNote;
         private TextBox _txtUserAgent;
+        private ComboBox _cboBrowserVersion;
         private Button _btnSave;
         private Button _btnCancel;
 
@@ -27,7 +29,7 @@ namespace ADBLogin.UI
         {
             bool isNew = Profile.ProfileId == "DEFAULT_ROOT" || string.IsNullOrEmpty(Profile.ProfileName);
             this.Text = isNew ? "Tạo Hồ Sơ Mới" : "Chỉnh Sửa - " + Profile.ProfileName;
-            this.Size = new Size(560, 480);
+            this.Size = new Size(560, 520);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -63,35 +65,53 @@ namespace ADBLogin.UI
             Label lblName = new Label { Text = "Tên Profile:", Location = new Point(labelX, 85), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             _txtName = new TextBox { Location = new Point(inputX, 82), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
 
-            // 2. Proxy
-            Label lblProxy = new Label { Text = "Địa chỉ Proxy:", Location = new Point(labelX, 130), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            _txtProxy = new TextBox { Location = new Point(inputX, 127), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
+            // 2. Trình duyệt / Lõi Chrome
+            Label lblBrowser = new Label { Text = "Lõi Trình duyệt:", Location = new Point(labelX, 125), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _cboBrowserVersion = new ComboBox
+            {
+                Location = new Point(inputX, 122),
+                Width = inputWidth,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9.5F)
+            };
+            _cboBrowserVersion.Items.Add("Mặc định theo hệ thống (Toolbar)");
+            var availableBrowsers = ADBLogin.Core.Services.BrowserVersionService.GetAvailableBrowsers();
+            foreach (var b in availableBrowsers)
+            {
+                if (b.VersionKey != "custom") _cboBrowserVersion.Items.Add(b.DisplayName);
+            }
+            _cboBrowserVersion.Items.Add("📁 Chọn file thực thi khác (.exe)...");
+            _cboBrowserVersion.SelectedIndex = 0;
+
+            // 3. Proxy
+            Label lblProxy = new Label { Text = "Địa chỉ Proxy:", Location = new Point(labelX, 165), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _txtProxy = new TextBox { Location = new Point(inputX, 162), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
             Label lblProxyHint = new Label 
             { 
                 Text = "Định dạng: IP:Port hoặc IP:Port:User:Pass (Để trống nếu dùng Direct)", 
-                Location = new Point(inputX, 155), 
+                Location = new Point(inputX, 190), 
                 AutoSize = true, 
                 ForeColor = Color.FromArgb(100, 116, 139), 
                 Font = new Font("Segoe UI", 8F) 
             };
 
-            // 3. User-Agent
-            Label lblUA = new Label { Text = "User-Agent:", Location = new Point(labelX, 185), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            _txtUserAgent = new TextBox { Location = new Point(inputX, 182), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
+            // 4. User-Agent
+            Label lblUA = new Label { Text = "User-Agent:", Location = new Point(labelX, 215), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _txtUserAgent = new TextBox { Location = new Point(inputX, 212), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
             Label lblUAHint = new Label 
             { 
                 Text = "Để trống để hệ thống tự động gán User-Agent chuẩn", 
-                Location = new Point(inputX, 210), 
+                Location = new Point(inputX, 240), 
                 AutoSize = true, 
                 ForeColor = Color.FromArgb(100, 116, 139), 
                 Font = new Font("Segoe UI", 8F) 
             };
 
-            // 4. Ghi chú
-            Label lblNote = new Label { Text = "Ghi chú (Note):", Location = new Point(labelX, 240), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            // 5. Ghi chú
+            Label lblNote = new Label { Text = "Ghi chú (Note):", Location = new Point(labelX, 265), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             _txtNote = new TextBox 
             { 
-                Location = new Point(inputX, 237), 
+                Location = new Point(inputX, 262), 
                 Width = inputWidth, 
                 Height = 85, 
                 Multiline = true, 
@@ -104,7 +124,7 @@ namespace ADBLogin.UI
             {
                 Text = "✔ Lưu Thay Đổi",
                 Size = new Size(140, 40),
-                Location = new Point(230, 365),
+                Location = new Point(230, 395),
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -118,7 +138,7 @@ namespace ADBLogin.UI
             {
                 Text = "Hủy Bỏ",
                 Size = new Size(110, 40),
-                Location = new Point(385, 365),
+                Location = new Point(385, 395),
                 BackColor = Color.FromArgb(241, 245, 249),
                 ForeColor = Color.FromArgb(71, 85, 105),
                 FlatStyle = FlatStyle.Flat,
@@ -131,6 +151,8 @@ namespace ADBLogin.UI
             this.Controls.Add(header);
             this.Controls.Add(lblName);
             this.Controls.Add(_txtName);
+            this.Controls.Add(lblBrowser);
+            this.Controls.Add(_cboBrowserVersion);
             this.Controls.Add(lblProxy);
             this.Controls.Add(_txtProxy);
             this.Controls.Add(lblProxyHint);
@@ -149,6 +171,18 @@ namespace ADBLogin.UI
             _txtProxy.Text = Profile.Proxy ?? "";
             _txtUserAgent.Text = Profile.UserAgent ?? "";
             _txtNote.Text = Profile.Notes ?? "";
+
+            if (!string.IsNullOrEmpty(Profile.BrowserVersion))
+            {
+                for (int i = 0; i < _cboBrowserVersion.Items.Count; i++)
+                {
+                    if (_cboBrowserVersion.Items[i].ToString().IndexOf(Profile.BrowserVersion, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _cboBrowserVersion.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
         }
 
         private void BtnSave_Click(object sender, EventArgs e)
@@ -164,6 +198,32 @@ namespace ADBLogin.UI
             Profile.Proxy = _txtProxy.Text.Trim();
             Profile.UserAgent = _txtUserAgent.Text.Trim();
             Profile.Notes = _txtNote.Text.Trim();
+
+            if (_cboBrowserVersion.SelectedIndex > 0)
+            {
+                string sel = _cboBrowserVersion.SelectedItem.ToString();
+                if (sel.Contains("Chọn file"))
+                {
+                    using (var ofd = new OpenFileDialog())
+                    {
+                        ofd.Title = "Chọn file thực thi Chrome / Orbita (chrome.exe)";
+                        ofd.Filter = "Trình duyệt (*.exe)|*.exe|Tất cả tệp (*.*)|*.*";
+                        if (ofd.ShowDialog() == DialogResult.OK)
+                        {
+                            Profile.BrowserPath = ofd.FileName;
+                            Profile.BrowserVersion = Path.GetFileName(ofd.FileName);
+                        }
+                    }
+                }
+                else
+                {
+                    Profile.BrowserVersion = sel;
+                }
+            }
+            else
+            {
+                Profile.BrowserVersion = string.Empty;
+            }
 
             this.DialogResult = DialogResult.OK;
             this.Close();

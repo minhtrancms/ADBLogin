@@ -21,6 +21,8 @@ namespace ADBLogin.Core.Models
         public string ProxiesFilePath { get; set; }
         public string UserAgentFilePath { get; set; }
         public int MaxConcurrentBrowsers { get; set; }
+        public string SelectedBrowserVersion { get; set; }
+        public string CustomBrowserPath { get; set; }
 
         public AppConfig()
         {
@@ -41,6 +43,8 @@ namespace ADBLogin.Core.Models
             ProxiesFilePath = "Files/Proxy.txt";
             UserAgentFilePath = "Files/UserAgent.txt";
             MaxConcurrentBrowsers = 50;
+            SelectedBrowserVersion = "Orbita 144";
+            CustomBrowserPath = string.Empty;
         }
     }
 }

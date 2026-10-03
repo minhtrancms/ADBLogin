@@ -43,7 +43,8 @@ namespace ADBLogin.Core.Services
             // 3. Cau hinh ChromeOptions
             var options = new ChromeOptions();
 
-            string resolvedBrowser = ResolveBrowserBinary(browserBinaryPath, profileDir);
+            string globalSetting = LocalConfigManager.Instance.CurrentConfig != null ? LocalConfigManager.Instance.CurrentConfig.SelectedBrowserVersion : "144";
+            string resolvedBrowser = BrowserVersionService.ResolveBrowserBinary(browserBinaryPath, profile.BrowserVersion, globalSetting);
             if (!string.IsNullOrEmpty(resolvedBrowser) && File.Exists(resolvedBrowser))
             {
                 options.BinaryLocation = resolvedBrowser;
@@ -166,35 +167,6 @@ namespace ADBLogin.Core.Services
             BrowserSessionManager.Instance.RegisterSession(profile.ProfileId, driver);
 
             return driver;
-        }
-
-        private string ResolveBrowserBinary(string explicitPath, string profileDir)
-        {
-            if (!string.IsNullOrEmpty(explicitPath) && File.Exists(explicitPath))
-            {
-                return explicitPath;
-            }
-
-            string version = "144";
-            string versionFile = Path.Combine(profileDir, "version.txt");
-            if (File.Exists(versionFile))
-            {
-                try
-                {
-                    string v = File.ReadAllText(versionFile).Trim();
-                    if (!string.IsNullOrEmpty(v)) version = v;
-                }
-                catch { }
-            }
-
-            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string orbitaPath = Path.Combine(userProfile, ".gologin", "browser", string.Format("orbita-browser-{0}", version), "chrome.exe");
-            if (File.Exists(orbitaPath)) return orbitaPath;
-
-            string defaultOrbita = Path.Combine(userProfile, ".gologin", "browser", "orbita-browser-144", "chrome.exe");
-            if (File.Exists(defaultOrbita)) return defaultOrbita;
-
-            return null;
         }
     }
 }
