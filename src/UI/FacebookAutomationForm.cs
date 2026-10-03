@@ -53,6 +53,10 @@ namespace ADBLogin.UI
         private Button _btnStart;
         private Button _btnStop;
         private RichTextBox _rtbLog;
+        private Label _lblProfileCount;
+        private Label _lblRunningStatus;
+        private Button _btnClearLog;
+        private Button _btnCopyLog;
 
         private readonly List<UserProfile> _allProfiles;
         private CancellationTokenSource _cts;
@@ -68,68 +72,144 @@ namespace ADBLogin.UI
         private void InitializeComponent()
         {
             this.Text = "🤖 BỘ CÔNG CỤ TỰ ĐỘNG HÓA FACEBOOK (AUTOMATION SUITE)";
-            this.Size = new Size(1060, 680);
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.BackColor = Color.FromArgb(248, 250, 252);
+            this.Size = new Size(1220, 800);
+            this.MinimumSize = new Size(1020, 650);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(243, 244, 246);
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.MaximizeBox = true;
+            this.MinimizeBox = true;
 
-            // Header Banner
+            // ================= 1. HEADER BANNER =================
             Panel pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = Color.FromArgb(24, 119, 242),
-                Padding = new Padding(20, 10, 20, 10)
+                Height = 56,
+                BackColor = Color.FromArgb(15, 23, 42),
+                Padding = new Padding(16, 8, 16, 8)
             };
 
             Label lblTitle = new Label
             {
-                Text = "FACEBOOK AUTOMATION & CDP STUDIO",
+                Text = "⚡ FACEBOOK AUTOMATION & CDP STUDIO",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(16, 10)
+                Location = new Point(14, 8)
             };
 
             Label lblSubtitle = new Label
             {
-                Text = "Tương tác nuôi nick, Tự động đăng nhập 2FA, Check Live UID, Seeding và Cổng điều khiển Remote DevTools (CDP)",
-                ForeColor = Color.FromArgb(220, 235, 255),
+                Text = "Nuôi nick tương tác, Đăng nhập 2FA, Check Live UID, Seeding bài viết & Cổng điều khiển Remote DevTools (CDP)",
+                ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 8.5F),
                 AutoSize = true,
-                Location = new Point(18, 34)
+                Location = new Point(15, 30)
             };
+
+            int apiPort = LocalApiService.Instance.Port;
+            Panel pnlApiBadge = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 270,
+                Height = 38,
+                BackColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(8, 4, 8, 4)
+            };
+
+            Label lblApiStatus = new Label
+            {
+                Text = string.Format("🌐 API: 127.0.0.1:{0} (Online)", apiPort),
+                ForeColor = Color.FromArgb(52, 211, 153),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(8, 10)
+            };
+
+            Button btnCopyApiHeader = new Button
+            {
+                Text = "📋 Copy",
+                Width = 60,
+                Height = 24,
+                Location = new Point(200, 6),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(51, 65, 85),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 7.5F)
+            };
+            btnCopyApiHeader.FlatAppearance.BorderSize = 0;
+            btnCopyApiHeader.Click += (s, e) =>
+            {
+                Clipboard.SetText(string.Format("http://127.0.0.1:{0}", apiPort));
+                MessageBox.Show(string.Format("Đã sao chép: http://127.0.0.1:{0}", apiPort), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            pnlApiBadge.Controls.Add(lblApiStatus);
+            pnlApiBadge.Controls.Add(btnCopyApiHeader);
+
             pnlHeader.Controls.Add(lblTitle);
             pnlHeader.Controls.Add(lblSubtitle);
+            pnlHeader.Controls.Add(pnlApiBadge);
 
-            // Main Split: Left = Profile Selector, Right = Tabs & Actions
-            SplitContainer split = new SplitContainer
+            // ================= 2. MAIN VERTICAL SPLIT (LEFT = PROFILES, RIGHT = WORKSPACE) =================
+            SplitContainer splitMain = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 330,
-                IsSplitterFixed = true
+                SplitterDistance = 310,
+                SplitterWidth = 6,
+                Panel1MinSize = 240,
+                Panel2MinSize = 680
             };
 
-            // LEFT PANEL: Profile Selection
-            Panel pnlLeft = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12) };
-            Label lblProfiles = new Label { Text = "Danh sách Profile áp dụng:", Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(30, 41, 59), Dock = DockStyle.Top, Height = 25 };
+            // ---------- LEFT PANEL: Profile Selection ----------
+            Panel pnlLeft = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10),
+                BackColor = Color.FromArgb(248, 250, 252)
+            };
 
-            _txtSearch = new TextBox { Dock = DockStyle.Top, Height = 26, Text = "" };
+            Panel pnlProfileTitle = new Panel { Dock = DockStyle.Top, Height = 28 };
+            Label lblProfiles = new Label
+            {
+                Text = "📋 PROFILES ÁP DỤNG",
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Dock = DockStyle.Left,
+                AutoSize = true
+            };
+            _lblProfileCount = new Label
+            {
+                Text = "0/0 profiles",
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Regular),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Dock = DockStyle.Right,
+                AutoSize = true
+            };
+            pnlProfileTitle.Controls.Add(lblProfiles);
+            pnlProfileTitle.Controls.Add(_lblProfileCount);
+
+            _txtSearch = new TextBox
+            {
+                Dock = DockStyle.Top,
+                Height = 26,
+                Font = new Font("Segoe UI", 9F),
+                Margin = new Padding(0, 4, 0, 4)
+            };
             _txtSearch.TextChanged += (s, e) => FilterProfileList();
 
             Panel pnlSelectButtons = new Panel { Dock = DockStyle.Top, Height = 34, Padding = new Padding(0, 4, 0, 4) };
-            _btnSelectAll = new Button { Text = "Chọn tất", Width = 72, Height = 26, Location = new Point(0, 4), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
+            _btnSelectAll = new Button { Text = "Chọn tất", Width = 72, Height = 26, Location = new Point(0, 4), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F), BackColor = Color.FromArgb(241, 245, 249) };
             _btnSelectAll.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
             _btnSelectAll.Click += (s, e) => SetAllChecked(true);
 
-            _btnDeselectAll = new Button { Text = "Bỏ chọn", Width = 72, Height = 26, Location = new Point(78, 4), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F) };
+            _btnDeselectAll = new Button { Text = "Bỏ chọn", Width = 72, Height = 26, Location = new Point(78, 4), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F), BackColor = Color.FromArgb(241, 245, 249) };
             _btnDeselectAll.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
             _btnDeselectAll.Click += (s, e) => SetAllChecked(false);
 
-            _btnSelectRunning = new Button { Text = "Chỉ đang mở", Width = 95, Height = 26, Location = new Point(156, 4), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F), ForeColor = Color.FromArgb(2, 132, 199) };
+            _btnSelectRunning = new Button { Text = "Chỉ đang mở", Width = 95, Height = 26, Location = new Point(156, 4), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F), BackColor = Color.FromArgb(224, 242, 254), ForeColor = Color.FromArgb(2, 132, 199) };
             _btnSelectRunning.FlatAppearance.BorderColor = Color.FromArgb(186, 230, 253);
             _btnSelectRunning.Click += (s, e) => SelectRunningProfiles();
 
@@ -141,159 +221,357 @@ namespace ADBLogin.UI
             {
                 Dock = DockStyle.Fill,
                 CheckOnClick = true,
+                IntegralHeight = false,
                 Font = new Font("Segoe UI", 9F),
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = Color.White
             };
+            _chkListProfiles.ItemCheck += (s, e) => this.BeginInvoke(new Action(UpdateProfileCountLabel));
 
             pnlLeft.Controls.Add(_chkListProfiles);
             pnlLeft.Controls.Add(pnlSelectButtons);
             pnlLeft.Controls.Add(_txtSearch);
-            pnlLeft.Controls.Add(lblProfiles);
-            split.Panel1.Controls.Add(pnlLeft);
+            pnlLeft.Controls.Add(pnlProfileTitle);
+            splitMain.Panel1.Controls.Add(pnlLeft);
 
-            // RIGHT PANEL: Tabs + Log + Bottom Actions
-            Panel pnlRight = new Panel { Dock = DockStyle.Fill, Padding = new Padding(12) };
+            // ================= 3. RIGHT PANEL: HORIZONTAL SPLIT (TOP = TABS, BOTTOM = LOG & ACTIONS) =================
+            SplitContainer splitRight = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal,
+                SplitterDistance = 370,
+                SplitterWidth = 6,
+                Panel1MinSize = 260,
+                Panel2MinSize = 220
+            };
 
-            TabControl tabs = new TabControl { Dock = DockStyle.Top, Height = 260, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            // ---------- UPPER PANEL: Configuration Tabs ----------
+            TabControl tabs = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F),
+                Padding = new Point(14, 6)
+            };
 
-            // TAB 1: Nuôi nick & Tương tác
+            // ===== TAB 1: Nuôi nick & Tương tác =====
             TabPage tabFarming = new TabPage("🌟 Nuôi Nick & Tương Tác");
             tabFarming.BackColor = Color.White;
-            tabFarming.Padding = new Padding(15);
+            tabFarming.AutoScroll = true;
+            tabFarming.Padding = new Padding(12);
 
-            _chkSurfFeed = new CheckBox { Text = "Lướt Newsfeed tự nhiên (cuộn mượt, dừng đọc ngẫu nhiên)", Location = new Point(20, 20), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
-            Label lblFeedSec = new Label { Text = "Thời gian lướt:", Location = new Point(45, 50), AutoSize = true };
-            _numFeedDuration = new NumericUpDown { Location = new Point(140, 48), Width = 60, Minimum = 10, Maximum = 600, Value = 60 };
-            Label lblSecUnit = new Label { Text = "giây / profile", Location = new Point(208, 50), AutoSize = true, ForeColor = Color.Gray };
+            TableLayoutPanel tlpFarming = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                Padding = new Padding(4)
+            };
+            tlpFarming.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tlpFarming.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
-            _chkAutoLike = new CheckBox { Text = "Thả cảm xúc ngẫu nhiên khi lướt bài", Location = new Point(20, 85), AutoSize = true, Checked = true };
-            Label lblLikeCount = new Label { Text = "Tối đa like:", Location = new Point(45, 112), AutoSize = true };
-            _numMaxLikes = new NumericUpDown { Location = new Point(140, 110), Width = 60, Minimum = 1, Maximum = 50, Value = 3 };
-            Label lblLikeUnit = new Label { Text = "bài viết", Location = new Point(208, 112), AutoSize = true, ForeColor = Color.Gray };
+            // Card 1: Bảng tin
+            GroupBox grpFeed = new GroupBox
+            {
+                Text = "📰 Tương Tác Bảng Tin (Newsfeed)",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
 
-            _chkWatchReels = new CheckBox { Text = "Xem video Reels / Watch", Location = new Point(360, 20), AutoSize = true, Checked = false };
-            Label lblReel = new Label { Text = "Số lượng Reels:", Location = new Point(385, 50), AutoSize = true };
-            _numReelCount = new NumericUpDown { Location = new Point(485, 48), Width = 60, Minimum = 1, Maximum = 20, Value = 3 };
+            _chkSurfFeed = new CheckBox { Text = "Lướt Newsfeed tự nhiên (cuộn mượt, dừng đọc ngẫu nhiên)", Location = new Point(14, 28), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            
+            Panel pnlFeedSec = new Panel { Location = new Point(36, 58), Size = new Size(340, 28) };
+            Label lblFeedSec = new Label { Text = "Thời gian lướt:", Location = new Point(0, 4), AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            _numFeedDuration = new NumericUpDown { Location = new Point(100, 2), Width = 65, Minimum = 10, Maximum = 600, Value = 60, Font = new Font("Segoe UI", 9F) };
+            Label lblSecUnit = new Label { Text = "giây / profile (Gợi ý: 60s)", Location = new Point(172, 4), AutoSize = true, ForeColor = Color.Gray, Font = new Font("Segoe UI", 8.5F) };
+            pnlFeedSec.Controls.Add(lblFeedSec);
+            pnlFeedSec.Controls.Add(_numFeedDuration);
+            pnlFeedSec.Controls.Add(lblSecUnit);
 
-            _chkCheckNotif = new CheckBox { Text = "Đọc và mở tab Thông báo (Tăng trust tài khoản)", Location = new Point(360, 85), AutoSize = true, Checked = true };
+            _chkAutoLike = new CheckBox { Text = "Thả cảm xúc ngẫu nhiên khi lướt bài (Like/Love/Care)", Location = new Point(14, 98), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F) };
+            
+            Panel pnlLikeCount = new Panel { Location = new Point(36, 128), Size = new Size(340, 28) };
+            Label lblLikeCount = new Label { Text = "Tối đa like:", Location = new Point(0, 4), AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            _numMaxLikes = new NumericUpDown { Location = new Point(100, 2), Width = 65, Minimum = 1, Maximum = 50, Value = 3, Font = new Font("Segoe UI", 9F) };
+            Label lblLikeUnit = new Label { Text = "bài viết / phiên", Location = new Point(172, 4), AutoSize = true, ForeColor = Color.Gray, Font = new Font("Segoe UI", 8.5F) };
+            pnlLikeCount.Controls.Add(lblLikeCount);
+            pnlLikeCount.Controls.Add(_numMaxLikes);
+            pnlLikeCount.Controls.Add(lblLikeUnit);
 
-            tabFarming.Controls.Add(_chkSurfFeed);
-            tabFarming.Controls.Add(lblFeedSec);
-            tabFarming.Controls.Add(_numFeedDuration);
-            tabFarming.Controls.Add(lblSecUnit);
-            tabFarming.Controls.Add(_chkAutoLike);
-            tabFarming.Controls.Add(lblLikeCount);
-            tabFarming.Controls.Add(_numMaxLikes);
-            tabFarming.Controls.Add(lblLikeUnit);
-            tabFarming.Controls.Add(_chkWatchReels);
-            tabFarming.Controls.Add(lblReel);
-            tabFarming.Controls.Add(_numReelCount);
-            tabFarming.Controls.Add(_chkCheckNotif);
+            Label lblFeedHint = new Label
+            {
+                Text = "💡 Hành vi cuộn trang mượt, dừng ngẫu nhiên 3-6s và thỉnh thoảng cuộn ngược lại giúp vượt qua bộ lọc quét của Meta.",
+                Location = new Point(14, 170),
+                Size = new Size(360, 45),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Font = new Font("Segoe UI", 8F)
+            };
+
+            grpFeed.Controls.Add(_chkSurfFeed);
+            grpFeed.Controls.Add(pnlFeedSec);
+            grpFeed.Controls.Add(_chkAutoLike);
+            grpFeed.Controls.Add(pnlLikeCount);
+            grpFeed.Controls.Add(lblFeedHint);
+
+            // Card 2: Reels & Trust
+            GroupBox grpReels = new GroupBox
+            {
+                Text = "🎬 Video, Reels & Tăng Trust",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
+
+            _chkWatchReels = new CheckBox { Text = "Xem video ngắn Reels / Watch", Location = new Point(14, 28), AutoSize = true, Checked = false, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            
+            Panel pnlReelCount = new Panel { Location = new Point(36, 58), Size = new Size(340, 28) };
+            Label lblReel = new Label { Text = "Số lượng Reels:", Location = new Point(0, 4), AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            _numReelCount = new NumericUpDown { Location = new Point(110, 2), Width = 65, Minimum = 1, Maximum = 20, Value = 3, Font = new Font("Segoe UI", 9F) };
+            Label lblReelUnit = new Label { Text = "video (Dừng 10-25s)", Location = new Point(182, 4), AutoSize = true, ForeColor = Color.Gray, Font = new Font("Segoe UI", 8.5F) };
+            pnlReelCount.Controls.Add(lblReel);
+            pnlReelCount.Controls.Add(_numReelCount);
+            pnlReelCount.Controls.Add(lblReelUnit);
+
+            _chkCheckNotif = new CheckBox { Text = "Đọc và mở tab Thông báo (Tăng trust tài khoản)", Location = new Point(14, 98), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F) };
+
+            Label lblReelHint = new Label
+            {
+                Text = "💡 Việc phân bổ xem Reels và đọc Thông báo tạo luồng hoạt động tự nhiên, tránh bị nghi ngờ là bot tự động.",
+                Location = new Point(14, 170),
+                Size = new Size(360, 45),
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Font = new Font("Segoe UI", 8F)
+            };
+
+            grpReels.Controls.Add(_chkWatchReels);
+            grpReels.Controls.Add(pnlReelCount);
+            grpReels.Controls.Add(_chkCheckNotif);
+            grpReels.Controls.Add(lblReelHint);
+
+            tlpFarming.Controls.Add(grpFeed, 0, 0);
+            tlpFarming.Controls.Add(grpReels, 1, 0);
+            tabFarming.Controls.Add(tlpFarming);
             tabs.TabPages.Add(tabFarming);
 
-            // TAB 2: Đăng nhập & Quản lý Acc
+            // ===== TAB 2: Đăng nhập & Quản lý Acc =====
             TabPage tabLogin = new TabPage("🔑 Đăng Nhập & Quản Lý Acc");
             tabLogin.BackColor = Color.White;
-            tabLogin.Padding = new Padding(15);
+            tabLogin.AutoScroll = true;
+            tabLogin.Padding = new Padding(12);
 
-            _radLoginCookie = new RadioButton { Text = "Đăng nhập bằng Cookie (c_user=...; xs=...)", Location = new Point(20, 15), AutoSize = true, Checked = true };
-            _txtCookieInput = new TextBox { Location = new Point(20, 42), Width = 640, Height = 26 };
+            GroupBox grpLogin = new GroupBox
+            {
+                Text = "Phương Thức Đăng Nhập Tự Động",
+                Dock = DockStyle.Top,
+                Height = 195,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
 
-            _radLoginCreds = new RadioButton { Text = "Đăng nhập bằng Tài khoản | Mật khẩu | 2FA Secret Key (Tự giải mã OTP):", Location = new Point(20, 80), AutoSize = true };
-            Label lblU = new Label { Text = "User / UID:", Location = new Point(20, 110), AutoSize = true };
-            _txtUsername = new TextBox { Location = new Point(90, 107), Width = 140 };
+            _radLoginCookie = new RadioButton { Text = "Đăng nhập bằng Cookie (c_user=...; xs=...)", Location = new Point(14, 24), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            _txtCookieInput = new TextBox
+            {
+                Location = new Point(14, 48),
+                Height = 26,
+                Width = 720,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9F)
+            };
 
-            Label lblP = new Label { Text = "Mật khẩu:", Location = new Point(245, 110), AutoSize = true };
-            _txtPassword = new TextBox { Location = new Point(310, 107), Width = 120, PasswordChar = '•' };
+            _radLoginCreds = new RadioButton { Text = "Đăng nhập bằng Tài khoản | Mật khẩu | 2FA Secret Key (Tự giải mã OTP):", Location = new Point(14, 88), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
 
-            Label lbl2FA = new Label { Text = "2FA Secret:", Location = new Point(445, 110), AutoSize = true };
-            _txtTwoFactor = new TextBox { Location = new Point(520, 107), Width = 140 };
+            TableLayoutPanel tlpCreds = new TableLayoutPanel
+            {
+                Location = new Point(14, 114),
+                Height = 60,
+                Width = 720,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                ColumnCount = 3,
+                RowCount = 1
+            };
+            tlpCreds.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34F));
+            tlpCreds.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F));
+            tlpCreds.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F));
 
-            _btnCheckLive = new Button { Text = "🔍 Check Live / Die", Location = new Point(20, 155), Width = 135, Height = 32, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat };
+            Panel pnlU = new Panel { Dock = DockStyle.Fill };
+            Label lblU = new Label { Text = "Tài khoản / UID:", Location = new Point(0, 0), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _txtUsername = new TextBox { Location = new Point(0, 20), Dock = DockStyle.Bottom, Height = 25, Font = new Font("Segoe UI", 9F) };
+            pnlU.Controls.Add(lblU);
+            pnlU.Controls.Add(_txtUsername);
+
+            Panel pnlP = new Panel { Dock = DockStyle.Fill };
+            Label lblP = new Label { Text = "Mật khẩu:", Location = new Point(4, 0), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _txtPassword = new TextBox { Location = new Point(4, 20), Dock = DockStyle.Bottom, Height = 25, PasswordChar = '•', Font = new Font("Segoe UI", 9F) };
+            pnlP.Controls.Add(lblP);
+            pnlP.Controls.Add(_txtPassword);
+
+            Panel pnl2FA = new Panel { Dock = DockStyle.Fill };
+            Label lbl2FA = new Label { Text = "2FA Secret Key (Tự sinh OTP):", Location = new Point(4, 0), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _txtTwoFactor = new TextBox { Location = new Point(4, 20), Dock = DockStyle.Bottom, Height = 25, Font = new Font("Segoe UI", 9F) };
+            pnl2FA.Controls.Add(lbl2FA);
+            pnl2FA.Controls.Add(_txtTwoFactor);
+
+            tlpCreds.Controls.Add(pnlU, 0, 0);
+            tlpCreds.Controls.Add(pnlP, 1, 0);
+            tlpCreds.Controls.Add(pnl2FA, 2, 0);
+
+            grpLogin.Controls.Add(_radLoginCookie);
+            grpLogin.Controls.Add(_txtCookieInput);
+            grpLogin.Controls.Add(_radLoginCreds);
+            grpLogin.Controls.Add(tlpCreds);
+
+            GroupBox grpQuickActions = new GroupBox
+            {
+                Text = "Thao Tác Nhanh Trên Profile Đang Chọn",
+                Dock = DockStyle.Top,
+                Height = 84,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
+
+            FlowLayoutPanel flpQuickActions = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+
+            _btnCheckLive = new Button { Text = "🔍 Check Live / Die / Checkpoint", Width = 210, Height = 34, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
             _btnCheckLive.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
             _btnCheckLive.Click += BtnCheckLive_Click;
 
-            _btnExtractCookie = new Button { Text = "📥 Xuất Cookie", Location = new Point(165, 155), Width = 120, Height = 32, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat };
+            _btnExtractCookie = new Button { Text = "📥 Xuất Cookie vào Clipboard", Width = 190, Height = 34, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
             _btnExtractCookie.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
             _btnExtractCookie.Click += BtnExtractCookie_Click;
 
-            _btnExtractToken = new Button { Text = "🔑 Xuất Token EAAB", Location = new Point(295, 155), Width = 135, Height = 32, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat };
+            _btnExtractToken = new Button { Text = "🔑 Xuất Token EAAB", Width = 160, Height = 34, BackColor = Color.FromArgb(241, 245, 249), FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
             _btnExtractToken.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
             _btnExtractToken.Click += BtnExtractToken_Click;
 
-            tabLogin.Controls.Add(_radLoginCookie);
-            tabLogin.Controls.Add(_txtCookieInput);
-            tabLogin.Controls.Add(_radLoginCreds);
-            tabLogin.Controls.Add(lblU);
-            tabLogin.Controls.Add(_txtUsername);
-            tabLogin.Controls.Add(lblP);
-            tabLogin.Controls.Add(_txtPassword);
-            tabLogin.Controls.Add(lbl2FA);
-            tabLogin.Controls.Add(_txtTwoFactor);
-            tabLogin.Controls.Add(_btnCheckLive);
-            tabLogin.Controls.Add(_btnExtractCookie);
-            tabLogin.Controls.Add(_btnExtractToken);
+            flpQuickActions.Controls.Add(_btnCheckLive);
+            flpQuickActions.Controls.Add(_btnExtractCookie);
+            flpQuickActions.Controls.Add(_btnExtractToken);
+            grpQuickActions.Controls.Add(flpQuickActions);
+
+            tabLogin.Controls.Add(grpQuickActions);
+            tabLogin.Controls.Add(grpLogin);
             tabs.TabPages.Add(tabLogin);
 
-            // TAB 3: Seeding & Nhóm
+            // ===== TAB 3: Seeding & Nhóm =====
             TabPage tabSeeding = new TabPage("💬 Seeding & Nhóm");
             tabSeeding.BackColor = Color.White;
-            tabSeeding.Padding = new Padding(15);
+            tabSeeding.AutoScroll = true;
+            tabSeeding.Padding = new Padding(12);
 
-            Label lblPostUrl = new Label { Text = "Link bài viết cần bình luận / seeding:", Location = new Point(20, 15), AutoSize = true };
-            _txtPostUrl = new TextBox { Location = new Point(20, 36), Width = 640 };
+            GroupBox grpPost = new GroupBox
+            {
+                Text = "Seeding Bình Luận Bài Viết",
+                Dock = DockStyle.Top,
+                Height = 185,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
 
-            Label lblComment = new Label { Text = "Nội dung bình luận (Hỗ trợ Spintax ví dụ: {Hay quá|Tuyệt vời|Đẹp thế shop}):", Location = new Point(20, 70), AutoSize = true };
-            _txtCommentSpintax = new TextBox { Location = new Point(20, 92), Width = 640, Height = 55, Multiline = true, Text = "{Sản phẩm tuyệt vời|Quá đẹp luôn ạ|Shop tư vấn nhiệt tình nha|10 điểm cho chất lượng}" };
+            Label lblPostUrl = new Label { Text = "Link bài viết Facebook cần bình luận / seeding:", Location = new Point(14, 24), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _txtPostUrl = new TextBox { Location = new Point(14, 46), Height = 26, Width = 720, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, Font = new Font("Segoe UI", 9F) };
 
-            _chkJoinGroup = new CheckBox { Text = "Tham gia nhóm theo link:", Location = new Point(20, 160), AutoSize = true };
-            _txtGroupUrl = new TextBox { Location = new Point(190, 158), Width = 470 };
+            Label lblComment = new Label { Text = "Nội dung bình luận (Hỗ trợ Spintax dạng {Hay quá|Tuyệt vời|Đẹp thế shop}):", Location = new Point(14, 80), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _txtCommentSpintax = new TextBox
+            {
+                Location = new Point(14, 102),
+                Height = 65,
+                Width = 720,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9F),
+                Text = "{Sản phẩm tuyệt vời|Quá đẹp luôn ạ|Shop tư vấn nhiệt tình nha|10 điểm cho chất lượng}"
+            };
 
-            tabSeeding.Controls.Add(lblPostUrl);
-            tabSeeding.Controls.Add(_txtPostUrl);
-            tabSeeding.Controls.Add(lblComment);
-            tabSeeding.Controls.Add(_txtCommentSpintax);
-            tabSeeding.Controls.Add(_chkJoinGroup);
-            tabSeeding.Controls.Add(_txtGroupUrl);
+            grpPost.Controls.Add(lblPostUrl);
+            grpPost.Controls.Add(_txtPostUrl);
+            grpPost.Controls.Add(lblComment);
+            grpPost.Controls.Add(_txtCommentSpintax);
+
+            GroupBox grpGroup = new GroupBox
+            {
+                Text = "Tương Tác Nhóm (Facebook Group)",
+                Dock = DockStyle.Top,
+                Height = 85,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
+
+            _chkJoinGroup = new CheckBox { Text = "Tham gia nhóm theo link:", Location = new Point(14, 30), AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            _txtGroupUrl = new TextBox { Location = new Point(195, 28), Height = 26, Width = 535, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, Font = new Font("Segoe UI", 9F) };
+
+            grpGroup.Controls.Add(_chkJoinGroup);
+            grpGroup.Controls.Add(_txtGroupUrl);
+
+            tabSeeding.Controls.Add(grpGroup);
+            tabSeeding.Controls.Add(grpPost);
             tabs.TabPages.Add(tabSeeding);
 
-            // TAB 4: Cổng CDP & Local API
+            // ===== TAB 4: Cổng CDP & Local API Studio =====
             TabPage tabCdp = new TabPage("🌐 Cổng CDP & Local API");
             tabCdp.BackColor = Color.White;
-            tabCdp.Padding = new Padding(15);
+            tabCdp.AutoScroll = true;
+            tabCdp.Padding = new Padding(14);
 
-            int apiPort = LocalApiService.Instance.Port;
+            GroupBox grpCdp = new GroupBox
+            {
+                Text = "Local REST API & Remote Chrome DevTools Protocol (CDP)",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                Padding = new Padding(14)
+            };
+
             Label lblApiBanner = new Label
             {
                 Text = string.Format("⚡ Local API Server đang hoạt động tại: http://127.0.0.1:{0}", apiPort),
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(16, 185, 129),
-                Location = new Point(20, 15),
+                Location = new Point(14, 28),
                 AutoSize = true
             };
 
             Label lblApiInfo = new Label
             {
-                Text = "Bạn có thể điều khiển ADBLogin bằng Python / Node.js / Puppeteer / Playwright thông qua các endpoint:\n" +
-                       string.Format("• GET  http://127.0.0.1:{0}/api/profiles        -> Lấy danh sách profiles\n", apiPort) +
-                       string.Format("• GET  http://127.0.0.1:{0}/api/profile/start?id=ID -> Mở profile và nhận CDP port\n", apiPort) +
-                       string.Format("• GET  http://127.0.0.1:{0}/api/profile/stop?id=ID  -> Đóng profile\n", apiPort) +
-                       string.Format("• GET  http://127.0.0.1:{0}/api/fb/check_uid?uid=ID -> Check Live/Die UID", apiPort),
-                Location = new Point(20, 45),
-                Size = new Size(640, 85),
-                Font = new Font("Consolas", 8.5F),
+                Text = "Bạn có thể điều khiển trực tiếp ADBLogin bằng Python / Node.js / Playwright / Selenium qua các endpoint:\n\n" +
+                       string.Format("  • GET  http://127.0.0.1:{0}/api/profiles         -> Lấy danh sách profiles kèm trạng thái & CDP port\n", apiPort) +
+                       string.Format("  • GET  http://127.0.0.1:{0}/api/profile/start?id=ID  -> Khởi chạy profile và nhận cdp_port\n", apiPort) +
+                       string.Format("  • GET  http://127.0.0.1:{0}/api/profile/stop?id=ID   -> Đóng profile đang mở\n", apiPort) +
+                       string.Format("  • GET  http://127.0.0.1:{0}/api/fb/check_uid?uid=ID  -> Check nhanh UID Live/Die không cần mở browser", apiPort),
+                Location = new Point(14, 58),
+                Size = new Size(720, 115),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Consolas", 9F),
                 ForeColor = Color.FromArgb(51, 65, 85)
+            };
+
+            FlowLayoutPanel flpCdpButtons = new FlowLayoutPanel
+            {
+                Location = new Point(14, 185),
+                Size = new Size(720, 45),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                FlowDirection = FlowDirection.LeftToRight
             };
 
             Button btnOpenPythonFolder = new Button
             {
-                Text = "📁 Mở thư mục code mẫu Python",
-                Location = new Point(20, 140),
-                Width = 220,
-                Height = 32,
+                Text = "📁 Thư mục code mẫu Python (Playwright / Selenium)",
+                Width = 320,
+                Height = 34,
                 BackColor = Color.FromArgb(241, 245, 249),
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
             };
             btnOpenPythonFolder.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
             btnOpenPythonFolder.Click += (s, e) =>
@@ -304,52 +582,148 @@ namespace ADBLogin.UI
 
             Button btnTestApi = new Button
             {
-                Text = "🔗 Mở API Status trên trình duyệt",
-                Location = new Point(250, 140),
+                Text = "🔗 Mở /api/profiles trên trình duyệt",
                 Width = 220,
-                Height = 32,
+                Height = 34,
                 BackColor = Color.FromArgb(241, 245, 249),
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
             };
             btnTestApi.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
-            btnTestApi.Click += (s, e) =>
+            btnTestApi.Click += (s, e) => Process.Start(string.Format("http://127.0.0.1:{0}/api/profiles", apiPort));
+
+            Button btnCopyApi = new Button
             {
-                Process.Start(string.Format("http://127.0.0.1:{0}/api/profiles", apiPort));
+                Text = "📋 Copy API Base URL",
+                Width = 150,
+                Height = 34,
+                BackColor = Color.FromArgb(241, 245, 249),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
+            btnCopyApi.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnCopyApi.Click += (s, e) =>
+            {
+                Clipboard.SetText(string.Format("http://127.0.0.1:{0}", apiPort));
+                MessageBox.Show(string.Format("Đã sao chép: http://127.0.0.1:{0}", apiPort), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
 
-            tabCdp.Controls.Add(lblApiBanner);
-            tabCdp.Controls.Add(lblApiInfo);
-            tabCdp.Controls.Add(btnOpenPythonFolder);
-            tabCdp.Controls.Add(btnTestApi);
+            flpCdpButtons.Controls.Add(btnOpenPythonFolder);
+            flpCdpButtons.Controls.Add(btnTestApi);
+            flpCdpButtons.Controls.Add(btnCopyApi);
+
+            grpCdp.Controls.Add(lblApiBanner);
+            grpCdp.Controls.Add(lblApiInfo);
+            grpCdp.Controls.Add(flpCdpButtons);
+            tabCdp.Controls.Add(grpCdp);
             tabs.TabPages.Add(tabCdp);
 
-            // Log Box
+            splitRight.Panel1.Controls.Add(tabs);
+
+            // ---------- LOWER PANEL: Log Console & Action Bar ----------
+            Panel pnlLogContainer = new Panel { Dock = DockStyle.Fill };
+
+            Panel pnlLogToolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 28,
+                BackColor = Color.FromArgb(241, 245, 249),
+                Padding = new Padding(8, 4, 8, 4)
+            };
+
+            Label lblLogTitle = new Label
+            {
+                Text = "⚡ NHẬT KÝ THỰC THI (EXECUTION LOG)",
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105),
+                Dock = DockStyle.Left,
+                AutoSize = true
+            };
+
+            _btnClearLog = new Button
+            {
+                Text = "🧹 Xóa log",
+                Width = 75,
+                Height = 22,
+                Dock = DockStyle.Right,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 7.5F),
+                BackColor = Color.White
+            };
+            _btnClearLog.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnClearLog.Click += (s, e) => _rtbLog.Clear();
+
+            _btnCopyLog = new Button
+            {
+                Text = "📋 Copy log",
+                Width = 80,
+                Height = 22,
+                Dock = DockStyle.Right,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 7.5F),
+                BackColor = Color.White
+            };
+            _btnCopyLog.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnCopyLog.Click += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(_rtbLog.Text))
+                {
+                    Clipboard.SetText(_rtbLog.Text);
+                    MessageBox.Show("Đã sao chép toàn bộ log!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            };
+
+            pnlLogToolbar.Controls.Add(lblLogTitle);
+            pnlLogToolbar.Controls.Add(_btnCopyLog);
+            pnlLogToolbar.Controls.Add(_btnClearLog);
+
             _rtbLog = new RichTextBox
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(15, 23, 42),
                 ForeColor = Color.FromArgb(226, 232, 240),
-                Font = new Font("Consolas", 8.5F),
+                Font = new Font("Consolas", 9F),
                 BorderStyle = BorderStyle.None,
                 ReadOnly = true
             };
 
-            // Bottom Actions Panel
-            Panel pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 48, Padding = new Padding(0, 8, 0, 0) };
+            Panel pnlBottom = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 54,
+                BackColor = Color.White,
+                Padding = new Padding(12, 8, 12, 8)
+            };
 
-            Label lblThread = new Label { Text = "Số luồng:", Location = new Point(0, 14), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
-            _numThreads = new NumericUpDown { Location = new Point(65, 12), Width = 45, Minimum = 1, Maximum = 10, Value = 2 };
+            Label lblThread = new Label
+            {
+                Text = "Số luồng:",
+                Location = new Point(12, 16),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 41, 59)
+            };
+            _numThreads = new NumericUpDown
+            {
+                Location = new Point(80, 14),
+                Width = 50,
+                Minimum = 1,
+                Maximum = 10,
+                Value = 2,
+                Font = new Font("Segoe UI", 9F)
+            };
 
             _btnStart = new Button
             {
                 Text = "▶ BẮT ĐẦU CHẠY",
-                Location = new Point(130, 8),
-                Width = 140,
-                Height = 32,
+                Location = new Point(145, 9),
+                Width = 155,
+                Height = 35,
                 BackColor = Color.FromArgb(24, 119, 242),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
             _btnStart.FlatAppearance.BorderSize = 0;
             _btnStart.Click += BtnStart_Click;
@@ -357,32 +731,55 @@ namespace ADBLogin.UI
             _btnStop = new Button
             {
                 Text = "⏹ DỪNG LẠI",
-                Location = new Point(280, 8),
-                Width = 110,
-                Height = 32,
+                Location = new Point(310, 9),
+                Width = 115,
+                Height = 35,
                 BackColor = Color.FromArgb(239, 68, 68),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
                 Enabled = false
             };
             _btnStop.FlatAppearance.BorderSize = 0;
             _btnStop.Click += BtnStop_Click;
 
+            _lblRunningStatus = new Label
+            {
+                Text = "● Sẵn sàng",
+                Location = new Point(440, 16),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(5, 150, 105)
+            };
+
             pnlBottom.Controls.Add(lblThread);
             pnlBottom.Controls.Add(_numThreads);
             pnlBottom.Controls.Add(_btnStart);
             pnlBottom.Controls.Add(_btnStop);
+            pnlBottom.Controls.Add(_lblRunningStatus);
 
-            pnlRight.Controls.Add(_rtbLog);
-            pnlRight.Controls.Add(pnlBottom);
-            pnlRight.Controls.Add(tabs);
-            split.Panel2.Controls.Add(pnlRight);
+            pnlLogContainer.Controls.Add(_rtbLog);
+            pnlLogContainer.Controls.Add(pnlLogToolbar);
+            pnlLogContainer.Controls.Add(pnlBottom);
+            splitRight.Panel2.Controls.Add(pnlLogContainer);
 
-            this.Controls.Add(split);
+            splitMain.Panel2.Controls.Add(splitRight);
+
+            this.Controls.Add(splitMain);
             this.Controls.Add(pnlHeader);
 
             Log("Hệ thống Automation Facebook sẵn sàng. Vui lòng chọn profile và cấu hình kịch bản.");
+        }
+
+        private void UpdateProfileCountLabel()
+        {
+            if (_lblProfileCount != null)
+            {
+                int total = _chkListProfiles.Items.Count;
+                int checkedCount = _chkListProfiles.CheckedItems.Count;
+                _lblProfileCount.Text = string.Format("Đã chọn: {0}/{1}", checkedCount, total);
+            }
         }
 
         private void LoadProfileList()
@@ -394,6 +791,7 @@ namespace ADBLogin.UI
                 string display = string.Format("{0} [{1}]", p.ProfileName, running ? "RUNNING" : "STOP");
                 _chkListProfiles.Items.Add(new ProfileItem { Profile = p, Display = display });
             }
+            UpdateProfileCountLabel();
         }
 
         private void FilterProfileList()
@@ -409,6 +807,7 @@ namespace ADBLogin.UI
                     _chkListProfiles.Items.Add(new ProfileItem { Profile = p, Display = display });
                 }
             }
+            UpdateProfileCountLabel();
         }
 
         private void SetAllChecked(bool isChecked)
@@ -417,6 +816,7 @@ namespace ADBLogin.UI
             {
                 _chkListProfiles.SetItemChecked(i, isChecked);
             }
+            UpdateProfileCountLabel();
         }
 
         private void SelectRunningProfiles()
@@ -433,6 +833,7 @@ namespace ADBLogin.UI
                     _chkListProfiles.SetItemChecked(i, false);
                 }
             }
+            UpdateProfileCountLabel();
         }
 
         private List<UserProfile> GetSelectedProfiles()
@@ -475,6 +876,12 @@ namespace ADBLogin.UI
             _btnStart.Enabled = false;
             _btnStop.Enabled = true;
             _cts = new CancellationTokenSource();
+
+            if (_lblRunningStatus != null)
+            {
+                _lblRunningStatus.Text = string.Format("● Đang chạy ({0} profiles)...", selectedProfiles.Count);
+                _lblRunningStatus.ForeColor = Color.FromArgb(24, 119, 242);
+            }
 
             int threadCount = (int)_numThreads.Value;
             Log(string.Format("=== BẮT ĐẦU CHẠY KỊCH BẢN ({0} Profiles, {1} Luồng) ===", selectedProfiles.Count, threadCount));
@@ -533,6 +940,11 @@ namespace ADBLogin.UI
             _isRunning = false;
             _btnStart.Enabled = true;
             _btnStop.Enabled = false;
+            if (_lblRunningStatus != null)
+            {
+                _lblRunningStatus.Text = "● Đã hoàn tất";
+                _lblRunningStatus.ForeColor = Color.FromArgb(5, 150, 105);
+            }
             Log("=== HOÀN TẤT TẤT CẢ KỊCH BẢN ===");
         }
 
@@ -617,6 +1029,11 @@ namespace ADBLogin.UI
             if (_cts != null)
             {
                 _cts.Cancel();
+                if (_lblRunningStatus != null)
+                {
+                    _lblRunningStatus.Text = "● Đang dừng lại...";
+                    _lblRunningStatus.ForeColor = Color.FromArgb(239, 68, 68);
+                }
                 Log("[*] Đang gửi tín hiệu dừng tới các luồng...");
             }
         }
