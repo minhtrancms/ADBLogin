@@ -57,6 +57,8 @@ namespace ADBLogin.UI
         private Label _lblRunningStatus;
         private Button _btnClearLog;
         private Button _btnCopyLog;
+        private SplitContainer _splitMain;
+        private SplitContainer _splitRight;
 
         private readonly List<UserProfile> _allProfiles;
         private CancellationTokenSource _cts;
@@ -153,14 +155,11 @@ namespace ADBLogin.UI
             pnlHeader.Controls.Add(pnlApiBadge);
 
             // ================= 2. MAIN VERTICAL SPLIT (LEFT = PROFILES, RIGHT = WORKSPACE) =================
-            SplitContainer splitMain = new SplitContainer
+            _splitMain = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 310,
-                SplitterWidth = 6,
-                Panel1MinSize = 240,
-                Panel2MinSize = 680
+                SplitterWidth = 6
             };
 
             // ---------- LEFT PANEL: Profile Selection ----------
@@ -232,17 +231,14 @@ namespace ADBLogin.UI
             pnlLeft.Controls.Add(pnlSelectButtons);
             pnlLeft.Controls.Add(_txtSearch);
             pnlLeft.Controls.Add(pnlProfileTitle);
-            splitMain.Panel1.Controls.Add(pnlLeft);
+            _splitMain.Panel1.Controls.Add(pnlLeft);
 
             // ================= 3. RIGHT PANEL: HORIZONTAL SPLIT (TOP = TABS, BOTTOM = LOG & ACTIONS) =================
-            SplitContainer splitRight = new SplitContainer
+            _splitRight = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                SplitterDistance = 370,
-                SplitterWidth = 6,
-                Panel1MinSize = 260,
-                Panel2MinSize = 220
+                SplitterWidth = 6
             };
 
             // ---------- UPPER PANEL: Configuration Tabs ----------
@@ -618,7 +614,7 @@ namespace ADBLogin.UI
             tabCdp.Controls.Add(grpCdp);
             tabs.TabPages.Add(tabCdp);
 
-            splitRight.Panel1.Controls.Add(tabs);
+            _splitRight.Panel1.Controls.Add(tabs);
 
             // ---------- LOWER PANEL: Log Console & Action Bar ----------
             Panel pnlLogContainer = new Panel { Dock = DockStyle.Fill };
@@ -762,14 +758,33 @@ namespace ADBLogin.UI
             pnlLogContainer.Controls.Add(_rtbLog);
             pnlLogContainer.Controls.Add(pnlLogToolbar);
             pnlLogContainer.Controls.Add(pnlBottom);
-            splitRight.Panel2.Controls.Add(pnlLogContainer);
+            _splitRight.Panel2.Controls.Add(pnlLogContainer);
 
-            splitMain.Panel2.Controls.Add(splitRight);
+            _splitMain.Panel2.Controls.Add(_splitRight);
 
-            this.Controls.Add(splitMain);
+            this.Controls.Add(_splitMain);
             this.Controls.Add(pnlHeader);
 
             Log("Hệ thống Automation Facebook sẵn sàng. Vui lòng chọn profile và cấu hình kịch bản.");
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            try
+            {
+                if (_splitMain != null && _splitMain.Width > 500)
+                {
+                    int target = Math.Min(310, _splitMain.Width - 250);
+                    if (target > 50) _splitMain.SplitterDistance = target;
+                }
+                if (_splitRight != null && _splitRight.Height > 400)
+                {
+                    int target = Math.Min(360, _splitRight.Height - 150);
+                    if (target > 50) _splitRight.SplitterDistance = target;
+                }
+            }
+            catch { }
         }
 
         private void UpdateProfileCountLabel()

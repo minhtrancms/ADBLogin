@@ -196,8 +196,15 @@ namespace ADBLogin.UI
             _btnFacebookAuto = CreateCompactButton("🤖 Auto FB", Color.FromArgb(24, 119, 242), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Facebook & Cổng CDP Studio", Color.FromArgb(13, 90, 190));
             _btnFacebookAuto.Click += (s, e) =>
             {
-                var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
-                fbForm.Show(this);
+                try
+                {
+                    var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
+                    fbForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto FB:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             };
 
             // Group 4: Bộ chọn phiên bản Chrome / Orbita
@@ -662,8 +669,15 @@ namespace ADBLogin.UI
             itemAutoFb.ForeColor = Color.FromArgb(24, 119, 242);
             itemAutoFb.Click += (s, e) =>
             {
-                var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
-                fbForm.Show(this);
+                try
+                {
+                    var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
+                    fbForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto FB:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             };
 
             var itemCopyCdp = _contextMenu.Items.Add("🌐 Sao chép Debugging Port (CDP)");
