@@ -1,0 +1,85 @@
+﻿========================================================================
+            HUONG DAN SU DUNG ADBLOGIN ANTIDETECT V2.0 (PORTABLE)
+========================================================================
+
+Ban chi can giai nen file ZIP ra bat ky o dia nao (vi du: D:\ADBLogin hoac Desktop)
+va chay truc tiep file ADBLogin.exe la su dung duoc ngay! Khong can cai dat gi them!
+
+1. KHOI DONG:
+   - Nhan dup chuot vao: ADBLogin.exe
+   - Ung dung da duoc kich hoat san ban quyen vinh vien (Enterprise Unlimited).
+   - Che do Offline Mode tu dong hoat dong 100%, khong yeu cau mang noi bo xac thuc.
+
+2. LOI TRINH DUYET ANTIDETECT ORBITA 144:
+   - Tool da tich hop san loi Orbita 144 (Chromium 144 moi nhat) trong thu muc:
+     Gologin/orbita-browser-144/
+   - Da tich hop san chromedriver 144 tuong thich 100%.
+   - Tranh hoan toan cac canh bao trinh duyet cu cua Google/Gmail.
+
+3. CAC CHUC NANG AUTOMATION VA MMO TICH HOP SAN:
+   - Quan ly Profile: Chon profile tren danh sach va nhan nut [Mo Trinh Duyet] o thanh cong cu.
+   - Mo Profile Mobile: Nhan chuot phai vao profile -> Chon [Mo dang Phone (Mobile Phone Farm)]
+     (Man hinh ti le doc chuan Phone Farm).
+   
+   - [NEW] AUTOMATION SHOPEE: Nhan nut [Shopee Auto] hoac Menu Chuc Nang:
+     + Diem danh nhan Shopee Xu moi ngay.
+     + Luot Shopee Video tu nhien kem xem thoi gian random.
+     + Tu dong luu / claim toan bo ma giam gia (Voucher Hunter) tai trung tam voucher.
+     + Seeding tim kiem san pham / shop: Tim kiem tu khoa Spintax, cuon xem danh gia review,
+       va tu dong them san pham vao gio hang tao luot quan tam (Add to cart seeding).
+     + Dang nhap bang Cookie va Export Cookie Shopee.
+
+   - [NEW] AUTOMATION X / TWITTER: Nhan nut [Sieu Tool] -> [X / Twitter Auto]:
+     + Luot Home Timeline tu nhien voi toc do va cuon trang ngau nhien.
+     + Tu dong Tha Tim (Like) va Retweet bai viet tren timeline.
+     + Tu dong Follow tai khoan muc tieu theo danh sach username / profile URL.
+     + Dang bai Tweet moi voi noi dung ho tro cu phap Spintax {A|B|C} tranh spam.
+     + Dang nhap Cookie va Export Cookie Twitter.
+
+   - [NEW] AUTOMATION TELEGRAM WEB: Nhan nut [Sieu Tool] -> [Telegram Auto]:
+     + Tu dong tham gia (Join) vao cac kenh / nhom Telegram qua duong link t.me/...
+     + Tu dong tha bieu cam (Reaction: Tim, Like, Fire...) vao tin nhan moi nhat cua Channel.
+     + Kiem tra trang thai phien dang nhap Telegram Web.
+
+   - [NEW] DONG BO THAO TAC (MULTI-CONTROL SYNCHRONIZER): Nhan nut [Sieu Tool] -> [Dong Bo Trinh Duyet]:
+     + Chi dinh 1 Profile lam "Master" (Chu).
+     + Chon hang loat Profile khac lam "Slaves" (Quan).
+     + Dong bo tuc thi: Chuyen URL dong loat, Cuon trang (Scroll up/down), Nhap van ban dong thoi,
+       Click chuot theo vi tri phan tram man hinh tren tat ca cac cua so slave cung mot luc!
+
+   - [NEW] CAU HINH PROXY ROTATOR & CAPTCHA SOLVER: Nhan nut [Sieu Tool] -> [Cai Dat Proxy / Captcha]:
+     + Tich hop san API Key xoay Proxy dong: TMProxy, Tinsoft, ShopLike, ProxyFB, va Custom API.
+     + Tich hop san dich vu tu dong giai Captcha (CapSolver, 2Captcha, Anti-Captcha, 1stCaptcha).
+
+   - AUTOMATION GOOGLE & GMAIL: Nhan nut [Auto Google] tren thanh cong cu hoac chuot phai:
+     + Dang nhap Google tu dong vuot 2FA TOTP (tu dong giai ma Secret Key ra ma 6 so) & Recovery Email.
+     + Google Search Seeding: Tim kiem tu khoa Spintax, cuon trang, bam vao web dich, doc bai tang SEO.
+     + Xem video YouTube tu nhien & auto Tha Like tao lich su xem chan that cho tai khoan.
+     + Doc Hop thu den Gmail: Tu dong mo thu va trich xuat ma OTP xac nhan (4-8 so).
+     + Trich xuat Cookie Google vao Clipboard.
+
+   - AUTOMATION TIKTOK: Nhan nut [Auto TikTok] tren thanh cong cu hoac chuot phai:
+     + Nuoi nick luot FYP (For You Page): Cuon phim mui ten xuong tu nhien, thoi gian xem random,
+       ty le tha tim ngau nhien va mo xem binh luan.
+     + Auto Follow kenh theo danh sach profile / link channel.
+     + Binh luan Video bang noi dung Spintax da dang tranh trung lap.
+     + Dang nhap qua Cookie (SessionID) hoac kiem tra thong ke Follower/Likes/Status.
+
+   - AUTOMATION FACEBOOK: Nhan nut [Auto FB] tren thanh cong cu hoac chuot phai:
+     + Ho tro Nuoi nick: Luot Feed tu nhien, xem Reels, tuong tac ngau nhien.
+     + Dang nhap tu dong bang Cookie hoac UID|Pass|2FA (Tu giai ma ma OTP 6 so).
+     + Check Live / Die / Checkpoint.
+     + Export Cookie, Access Token EAAB.
+
+   - Tao Profile hang loat: Nhan nut [Tao Hang Loat] o thanh cong cu tren cung.
+
+4. AUTOMATION QUA API / CDP (NEU CAN):
+   - Tool tu dong khoi chay Local REST API Server tai cong: http://127.0.0.1:5858
+   - Ho tro cac lenh:
+     + GET  /api/profiles       : Lay danh sach profile
+     + POST /api/profiles/start : Mo profile (kem mo cong CDP remote debugging)
+     + POST /api/profiles/stop  : Dong profile
+   - Chi tiet co trong thu muc: automation/
+
+Chuc ban su dung hieu qua va thanh cong!
+========================================================================

@@ -35,6 +35,8 @@ namespace ADBLogin.UI
         private Button _btnFacebookAuto;
         private Button _btnGoogleAuto;
         private Button _btnTikTokAuto;
+        private Button _btnShopeeAuto;
+        private Button _btnMoreTools;
 
         private NumericUpDown _numRows;
         private NumericUpDown _numCols;
@@ -237,6 +239,89 @@ namespace ADBLogin.UI
                 }
             };
 
+            _btnShopeeAuto = CreateCompactButton("🛒 Shopee", Color.FromArgb(238, 77, 45), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Shopee & Seeding", Color.FromArgb(200, 60, 35));
+            _btnShopeeAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var shopeeForm = new ShopeeAutomationForm(_accountManager.GetAllProfiles());
+                    shopeeForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Shopee:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            ContextMenuStrip moreToolsMenu = new ContextMenuStrip();
+            moreToolsMenu.Font = new Font("Segoe UI", 9F);
+
+            var miTwitter = moreToolsMenu.Items.Add("🐦 Kịch bản X / Twitter (Airdrop)");
+            miTwitter.Click += (s, e) =>
+            {
+                try
+                {
+                    var twForm = new TwitterAutomationForm(_accountManager.GetAllProfiles());
+                    twForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Twitter:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var miTelegram = moreToolsMenu.Items.Add("✈️ Kịch bản Telegram Web Automation");
+            miTelegram.Click += (s, e) =>
+            {
+                try
+                {
+                    var tgForm = new TelegramAutomationForm(_accountManager.GetAllProfiles());
+                    tgForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Telegram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            moreToolsMenu.Items.Add(new ToolStripSeparator());
+
+            var miSync = moreToolsMenu.Items.Add("⚡ Đồng Bộ Chuột & Phím (Synchronizer)");
+            miSync.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            miSync.ForeColor = Color.FromArgb(99, 102, 241);
+            miSync.Click += (s, e) =>
+            {
+                try
+                {
+                    var syncForm = new SynchronizerForm(_accountManager.GetAllProfiles());
+                    syncForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var miSettings = moreToolsMenu.Items.Add("⚙️ Cấu Hình Proxy Xoay & Tự Động Giải Captcha");
+            miSettings.Click += (s, e) =>
+            {
+                try
+                {
+                    var setForm = new AdvancedSettingsForm();
+                    setForm.ShowDialog(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở cấu hình:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnMoreTools = CreateCompactButton("⚡ Siêu Tool ▼", Color.FromArgb(99, 102, 241), Color.White, 98, true, "Mở rộng: X/Twitter, Telegram, Đồng bộ chuột/phím, Proxy xoay & Captcha", Color.FromArgb(79, 70, 229));
+            _btnMoreTools.Click += (s, e) =>
+            {
+                moreToolsMenu.Show(_btnMoreTools, new Point(0, _btnMoreTools.Height));
+            };
+
             // Group 4: Bộ chọn phiên bản Chrome / Orbita
             Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
             _cboBrowserVersion = new ComboBox
@@ -303,6 +388,8 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(_btnFacebookAuto);
             toolPanel.Controls.Add(_btnGoogleAuto);
             toolPanel.Controls.Add(_btnTikTokAuto);
+            toolPanel.Controls.Add(_btnShopeeAuto);
+            toolPanel.Controls.Add(_btnMoreTools);
             toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(lblBrowser);
             toolPanel.Controls.Add(_cboBrowserVersion);
@@ -741,6 +828,84 @@ namespace ADBLogin.UI
                 catch (Exception ex)
                 {
                     MessageBox.Show(string.Format("Lỗi mở giao diện Auto TikTok:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoShopee = _contextMenu.Items.Add("🛒 Kịch bản Shopee (Cày Xu & Seeding)");
+            itemAutoShopee.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoShopee.ForeColor = Color.FromArgb(238, 77, 45);
+            itemAutoShopee.Click += (s, e) =>
+            {
+                try
+                {
+                    var shopeeForm = new ShopeeAutomationForm(_accountManager.GetAllProfiles());
+                    shopeeForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Shopee:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoTwitter = _contextMenu.Items.Add("🐦 Kịch bản X / Twitter (Airdrop)");
+            itemAutoTwitter.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoTwitter.ForeColor = Color.FromArgb(29, 155, 240);
+            itemAutoTwitter.Click += (s, e) =>
+            {
+                try
+                {
+                    var twForm = new TwitterAutomationForm(_accountManager.GetAllProfiles());
+                    twForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Twitter:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAutoTelegram = _contextMenu.Items.Add("✈️ Kịch bản Telegram Web");
+            itemAutoTelegram.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoTelegram.ForeColor = Color.FromArgb(34, 158, 217);
+            itemAutoTelegram.Click += (s, e) =>
+            {
+                try
+                {
+                    var tgForm = new TelegramAutomationForm(_accountManager.GetAllProfiles());
+                    tgForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Telegram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemSync = _contextMenu.Items.Add("⚡ Đồng Bộ Chuột & Phím (Synchronizer)");
+            itemSync.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemSync.ForeColor = Color.FromArgb(99, 102, 241);
+            itemSync.Click += (s, e) =>
+            {
+                try
+                {
+                    var syncForm = new SynchronizerForm(_accountManager.GetAllProfiles());
+                    syncForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemAdvSettings = _contextMenu.Items.Add("⚙️ Cấu Hình Proxy Xoay & Captcha");
+            itemAdvSettings.Click += (s, e) =>
+            {
+                try
+                {
+                    var setForm = new AdvancedSettingsForm();
+                    setForm.ShowDialog(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở cấu hình:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
 
