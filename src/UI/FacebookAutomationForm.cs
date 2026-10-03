@@ -61,9 +61,9 @@ namespace ADBLogin.UI
         private Button _btnTestFetchApi;
         private CheckBox _chkApiFallbackToManual;
         private TextBox _txtAutoPostContent;
-        private CheckBox _chkPostAttachImage;
-        private TextBox _txtPostImagePath;
-        private Button _btnBrowsePostImage;
+        private CheckBox _chkPostAttachImageFromApi;
+        private RadioButton _radAllImages;
+        private RadioButton _radThumbOnly;
         private Button _btnTestPostSpintax;
         private Button _btnPostNow;
 
@@ -878,8 +878,8 @@ namespace ADBLogin.UI
                 Padding = new Padding(12)
             };
 
-            _radContentManual = new RadioButton { Text = "✍️ Soạn nội dung thủ công / Spintax", Location = new Point(14, 22), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
-            _radContentApi = new RadioButton { Text = "🌐 Lấy nội dung tự động từ API Endpoint", Location = new Point(270, 22), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            _radContentManual = new RadioButton { Text = "✍️ Soạn nội dung thủ công / Spintax", Location = new Point(14, 22), AutoSize = true, Checked = false, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            _radContentApi = new RadioButton { Text = "🌐 Lấy nội dung tự động từ API Endpoint", Location = new Point(270, 22), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.FromArgb(24, 119, 242) };
 
             _pnlApiSettings = new Panel
             {
@@ -887,11 +887,11 @@ namespace ADBLogin.UI
                 Width = 710,
                 Height = 58,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Enabled = false
+                Enabled = true
             };
 
-            Label lblApiUrl = new Label { Text = "URL API Endpoint (GET):", Location = new Point(0, 5), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Regular), ForeColor = Color.FromArgb(71, 85, 105) };
-            _txtPostApiUrl = new TextBox { Location = new Point(150, 2), Width = 390, Height = 24, Font = new Font("Segoe UI", 9F), Text = "https://dummyjson.com/quotes/random" };
+            Label lblApiUrl = new Label { Text = "URL API Endpoint (GET):", Location = new Point(0, 5), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(71, 85, 105) };
+            _txtPostApiUrl = new TextBox { Location = new Point(155, 2), Width = 385, Height = 24, Font = new Font("Segoe UI", 9F), Text = "https://blog.shin520.org/api/v1/feed/facebook" };
             _btnTestFetchApi = new Button
             {
                 Text = "⚡ Lấy thử từ API",
@@ -1008,9 +1008,10 @@ namespace ADBLogin.UI
                             apiResult.Content.Length,
                             apiResult.Content.Length > 200 ? apiResult.Content.Substring(0, 200) + "..." : apiResult.Content);
 
-                        if (!string.IsNullOrEmpty(apiResult.ImageUrl))
+                        if (apiResult.ImageUrls.Count > 0)
                         {
-                            preview += string.Format("\n\nẢnh đính kèm từ API:\n{0}", apiResult.ImageUrl);
+                            preview += string.Format("\n\n🖼️ Hình ảnh đính kèm từ API ({0} ảnh):\n- {1}",
+                                apiResult.ImageUrls.Count, string.Join("\n- ", apiResult.ImageUrls.ToArray()));
                         }
 
                         var dr = MessageBox.Show(preview + "\n\nBạn có muốn nạp nội dung này vào ô soạn thảo bên dưới để xem đầy đủ không?",
@@ -1046,10 +1047,10 @@ namespace ADBLogin.UI
             grpContent.Controls.Add(_radContentApi);
             grpContent.Controls.Add(_radContentManual);
 
-            // Group 3: Đính kèm hình ảnh
+            // Group 3: Hình ảnh đính kèm từ API (không dùng ảnh từ máy tính)
             GroupBox grpImage = new GroupBox
             {
-                Text = "3. Đính Kèm Hình Ảnh (Tùy chọn)",
+                Text = "3. Hình Ảnh Đăng Kèm (Tự động lấy link ảnh từ API)",
                 Dock = DockStyle.Top,
                 Height = 85,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -1057,43 +1058,38 @@ namespace ADBLogin.UI
                 Padding = new Padding(12)
             };
 
-            _chkPostAttachImage = new CheckBox { Text = "Đăng kèm hình ảnh từ máy tính:", Location = new Point(14, 24), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
-            _txtPostImagePath = new TextBox { Location = new Point(14, 48), Width = 570, Height = 24, Font = new Font("Segoe UI", 9F), Enabled = false };
-            _btnBrowsePostImage = new Button
+            _chkPostAttachImageFromApi = new CheckBox
             {
-                Text = "📁 Chọn ảnh...",
-                Location = new Point(592, 46),
-                Width = 130,
-                Height = 27,
-                BackColor = Color.FromArgb(241, 245, 249),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                Enabled = false
-            };
-            _btnBrowsePostImage.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
-
-            _chkPostAttachImage.CheckedChanged += (s, e) =>
-            {
-                _txtPostImagePath.Enabled = _chkPostAttachImage.Checked;
-                _btnBrowsePostImage.Enabled = _chkPostAttachImage.Checked;
+                Text = "🖼️ Tự động đính kèm hình ảnh từ API vào bài viết Facebook",
+                Location = new Point(14, 24),
+                AutoSize = true,
+                Checked = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(16, 185, 129)
             };
 
-            _btnBrowsePostImage.Click += (s, e) =>
+            _radAllImages = new RadioButton { Text = "Tất cả ảnh từ bài viết (Album ảnh)", Location = new Point(14, 52), AutoSize = true, Checked = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Regular) };
+            _radThumbOnly = new RadioButton { Text = "Chỉ ảnh đại diện (Thumbnail)", Location = new Point(260, 52), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Regular) };
+
+            Label lblImageApiNote = new Label
             {
-                using (var ofd = new OpenFileDialog())
-                {
-                    ofd.Title = "Chọn hình ảnh để đăng lên Facebook";
-                    ofd.Filter = "Tất cả hình ảnh (*.jpg;*.jpeg;*.png;*.webp)|*.jpg;*.jpeg;*.png;*.webp|Tất cả tệp (*.*)|*.*";
-                    if (ofd.ShowDialog() == DialogResult.OK)
-                    {
-                        _txtPostImagePath.Text = ofd.FileName;
-                    }
-                }
+                Text = "💡 Hệ thống tự động đọc link ảnh từ API (mảng images hoặc thumbnail), tải về máy tạm và nạp trực tiếp lên Facebook.",
+                Location = new Point(450, 54),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Italic),
+                ForeColor = Color.FromArgb(100, 116, 139)
             };
 
-            grpImage.Controls.Add(_btnBrowsePostImage);
-            grpImage.Controls.Add(_txtPostImagePath);
-            grpImage.Controls.Add(_chkPostAttachImage);
+            _chkPostAttachImageFromApi.CheckedChanged += (s, e) =>
+            {
+                _radAllImages.Enabled = _chkPostAttachImageFromApi.Checked;
+                _radThumbOnly.Enabled = _chkPostAttachImageFromApi.Checked;
+            };
+
+            grpImage.Controls.Add(lblImageApiNote);
+            grpImage.Controls.Add(_radThumbOnly);
+            grpImage.Controls.Add(_radAllImages);
+            grpImage.Controls.Add(_chkPostAttachImageFromApi);
 
             // Group 4: Thực thi
             GroupBox grpAction = new GroupBox
@@ -1306,10 +1302,11 @@ namespace ADBLogin.UI
             // Cấu hình Đăng bài viết
             bool doPost = _chkEnablePost != null && _chkEnablePost.Checked;
             bool useApi = _radContentApi != null && _radContentApi.Checked;
-            string apiUrl = _txtPostApiUrl != null ? _txtPostApiUrl.Text.Trim() : "";
+            string apiUrl = _txtPostApiUrl != null ? _txtPostApiUrl.Text.Trim() : "https://blog.shin520.org/api/v1/feed/facebook";
             bool apiFallback = _chkApiFallbackToManual != null && _chkApiFallbackToManual.Checked;
+            bool attachApiImages = _chkPostAttachImageFromApi != null && _chkPostAttachImageFromApi.Checked;
+            bool allImages = _radAllImages != null && _radAllImages.Checked;
             string postContent = _txtAutoPostContent != null ? _txtAutoPostContent.Text : "";
-            string postImage = (_chkPostAttachImage != null && _chkPostAttachImage.Checked && _txtPostImagePath != null) ? _txtPostImagePath.Text.Trim() : null;
             string postGroupUrl = (_radPostGroup != null && _radPostGroup.Checked && _txtPostGroupTarget != null) ? _txtPostGroupTarget.Text.Trim() : null;
 
             await Task.Run(() =>
@@ -1328,7 +1325,7 @@ namespace ADBLogin.UI
 
                         RunProfileTask(profile, doSurf, feedSec, doLike, maxLike, doReels, reelCount, doNotif,
                             doLoginCookie, cookieStr, doLoginCreds, userStr, passStr, secretStr,
-                            postUrl, commentSpintax, doJoin, groupUrl, doPost, useApi, apiUrl, apiFallback, postContent, postImage, postGroupUrl, _cts.Token);
+                            postUrl, commentSpintax, doJoin, groupUrl, doPost, useApi, apiUrl, apiFallback, attachApiImages, allImages, postContent, postGroupUrl, _cts.Token);
                     });
                 }
                 catch (OperationCanceledException)
@@ -1355,7 +1352,7 @@ namespace ADBLogin.UI
         private void RunProfileTask(UserProfile profile, bool doSurf, int feedSec, bool doLike, int maxLike, bool doReels, int reelCount, bool doNotif,
             bool doLoginCookie, string cookieStr, bool doLoginCreds, string userStr, string passStr, string secretStr,
             string postUrl, string commentSpintax, bool doJoin, string groupUrl,
-            bool doPost, bool useApi, string apiUrl, bool apiFallback, string postContent, string postImage, string postGroupUrl, CancellationToken ct)
+            bool doPost, bool useApi, string apiUrl, bool apiFallback, bool attachApiImages, bool allImages, string postContent, string postGroupUrl, CancellationToken ct)
         {
             string tag = string.Format("[{0}]", profile.ProfileName);
             Log(string.Format("{0} Đang chuẩn bị trình duyệt...", tag));
@@ -1430,23 +1427,30 @@ namespace ADBLogin.UI
             if (doPost && !ct.IsCancellationRequested)
             {
                 string actualContent = postContent;
-                string actualImage = postImage;
+                List<string> actualImages = new List<string>();
 
                 if (useApi && !string.IsNullOrWhiteSpace(apiUrl))
                 {
-                    Log(string.Format("{0} Đang gửi yêu cầu tới API để lấy nội dung bài viết...", tag));
+                    Log(string.Format("{0} Đang gọi API lấy nội dung & hình ảnh bài viết: {1}", tag, apiUrl));
                     var apiRes = fb.FetchPostFromApi(apiUrl, m => Log(tag + " " + m));
                     if (apiRes != null && apiRes.Success && !string.IsNullOrWhiteSpace(apiRes.Content))
                     {
                         actualContent = apiRes.Content;
-                        if (!string.IsNullOrEmpty(apiRes.DownloadedImagePath) && string.IsNullOrEmpty(actualImage))
+                        if (attachApiImages && apiRes.DownloadedImagePaths != null && apiRes.DownloadedImagePaths.Count > 0)
                         {
-                            actualImage = apiRes.DownloadedImagePath;
+                            if (allImages)
+                            {
+                                actualImages.AddRange(apiRes.DownloadedImagePaths);
+                            }
+                            else
+                            {
+                                actualImages.Add(apiRes.DownloadedImagePaths[0]);
+                            }
                         }
                     }
                     else if (apiFallback && !string.IsNullOrWhiteSpace(postContent))
                     {
-                        Log(string.Format("{0} [!] Lấy bài từ API thất bại ({1}). Sử dụng nội dung soạn sẵn dự phòng...", tag, apiRes != null ? apiRes.ErrorMessage : "Lỗi"));
+                        Log(string.Format("{0} [!] Lấy bài từ API thất bại ({1}). Sử dụng nội dung thủ công dự phòng...", tag, apiRes != null ? apiRes.ErrorMessage : "Lỗi"));
                         actualContent = postContent;
                     }
                     else
@@ -1458,8 +1462,8 @@ namespace ADBLogin.UI
 
                 if (!string.IsNullOrEmpty(actualContent))
                 {
-                    Log(string.Format("{0} Đang tiến hành đăng bài viết...", tag));
-                    fb.CreatePost(driver, actualContent, actualImage, postGroupUrl, m => Log(tag + " " + m));
+                    Log(string.Format("{0} Đang tiến hành đăng bài viết kèm {1} hình ảnh từ API...", tag, actualImages.Count));
+                    fb.CreatePost(driver, actualContent, actualImages, postGroupUrl, m => Log(tag + " " + m));
                 }
             }
 

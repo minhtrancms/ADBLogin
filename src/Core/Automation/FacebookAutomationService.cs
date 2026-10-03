@@ -690,9 +690,9 @@ namespace ADBLogin.Core.Automation
 
         /// <summary>
         /// Đăng bài viết mới lên Trang cá nhân (Newsfeed) hoặc vào Nhóm (Facebook Group)
-        /// Hỗ trợ nội dung Spintax và đính kèm hình ảnh
+        /// Hỗ trợ nội dung Spintax và đính kèm danh sách hình ảnh (tự động lấy từ API)
         /// </summary>
-        public bool CreatePost(IWebDriver driver, string contentSpintax, string imagePath = null, string targetGroupUrl = null, Action<string> log = null)
+        public bool CreatePost(IWebDriver driver, string contentSpintax, List<string> imagePaths, string targetGroupUrl = null, Action<string> log = null)
         {
             try
             {
@@ -822,13 +822,24 @@ namespace ADBLogin.Core.Automation
                 HumanType(postInput, resolvedText);
                 Sleep(1500, 2500);
 
-                // 3. Đính kèm hình ảnh (nếu có)
-                if (!string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath))
+                // 3. Đính kèm danh sách hình ảnh (lấy trực tiếp từ API)
+                List<string> validImages = new List<string>();
+                if (imagePaths != null)
                 {
-                    DoLog(log, string.Format("[*] Đang đính kèm hình ảnh: {0}", Path.GetFileName(imagePath)));
+                    foreach (var img in imagePaths)
+                    {
+                        if (!string.IsNullOrWhiteSpace(img) && File.Exists(img))
+                        {
+                            validImages.Add(Path.GetFullPath(img));
+                        }
+                    }
+                }
+
+                if (validImages.Count > 0)
+                {
+                    DoLog(log, string.Format("[*] Đang đính kèm {0} hình ảnh từ API lên Facebook...", validImages.Count));
                     try
                     {
-                        // Thử tìm nút Ảnh/video để kích hoạt input[type=file] nếu cần
                         var photoButtons = driver.FindElements(By.CssSelector("div[role='dialog'] div[aria-label*='Ảnh/video'], div[role='dialog'] div[aria-label*='Photo/video'], div[aria-label*='Thêm ảnh']"));
                         if (photoButtons.Count > 0 && photoButtons[0].Displayed)
                         {
@@ -842,13 +853,25 @@ namespace ADBLogin.Core.Automation
                         {
                             try
                             {
-                                fi.SendKeys(Path.GetFullPath(imagePath));
+                                string multiArg = string.Join("\n", validImages.ToArray());
+                                fi.SendKeys(multiArg);
                                 fileUploaded = true;
-                                DoLog(log, "[+] Đã nạp file ảnh thành công, đang đợi tải lên...");
-                                Sleep(3500, 5500);
+                                DoLog(log, string.Format("[+] Đã nạp thành công {0} file ảnh lên Facebook...", validImages.Count));
+                                Sleep(4000, 6000);
                                 break;
                             }
-                            catch { }
+                            catch
+                            {
+                                try
+                                {
+                                    fi.SendKeys(validImages[0]);
+                                    fileUploaded = true;
+                                    DoLog(log, "[+] Đã nạp ảnh đầu tiên từ API lên Facebook...");
+                                    Sleep(3500, 5000);
+                                    break;
+                                }
+                                catch { }
+                            }
                         }
 
                         if (!fileUploaded)
@@ -922,23 +945,41 @@ namespace ADBLogin.Core.Automation
         }
 
         /// <summary>
+        /// Overload đăng bài viết với đường dẫn 1 ảnh đơn lẻ
+        /// </summary>
+        public bool CreatePost(IWebDriver driver, string contentSpintax, string imagePath = null, string targetGroupUrl = null, Action<string> log = null)
+        {
+            var list = new List<string>();
+            if (!string.IsNullOrWhiteSpace(imagePath)) list.Add(imagePath);
+            return CreatePost(driver, contentSpintax, list, targetGroupUrl, log);
+        }
+
+        /// <summary>
         /// Kết quả trích xuất bài viết từ API
         /// </summary>
         public class ApiPostResult
         {
             public bool Success { get; set; }
+            public string Title { get; set; }
             public string Content { get; set; }
+            public string Url { get; set; }
             public string ImageUrl { get; set; }
+            public List<string> ImageUrls { get; set; }
             public string DownloadedImagePath { get; set; }
+            public List<string> DownloadedImagePaths { get; set; }
             public string ErrorMessage { get; set; }
+
+            public ApiPostResult()
+            {
+                ImageUrls = new List<string>();
+                DownloadedImagePaths = new List<string>();
+            }
         }
 
         /// <summary>
-        /// Gọi API lấy nội dung bài viết tự động
-        /// Hỗ trợ:
-        /// 1. Plain text (chuỗi bài viết trực tiếp)
-        /// 2. JSON: tự động trích xuất các trường thông dụng (content, text, post, body, message, caption, title, quote,...)
-        /// 3. Ảnh đính kèm (nếu API có trường image, photo, img, image_url,...)
+        /// Gọi API lấy nội dung và hình ảnh bài viết tự động
+        /// Đặc biệt tối ưu hóa cho feed: https://blog.shin520.org/api/v1/feed/facebook
+        /// Tự động trích xuất fb_caption, images, thumbnail và tải toàn bộ ảnh về máy tạm
         /// </summary>
         public ApiPostResult FetchPostFromApi(string apiUrl, Action<string> log = null)
         {
@@ -1027,36 +1068,80 @@ namespace ADBLogin.Core.Automation
 
                         if (obj != null)
                         {
-                            // Tìm các key thông dụng cho nội dung bài viết
-                            string[] contentKeys = new string[] {
-                                "content", "text", "post", "body", "message", "caption", "status", "quote", "title", "description", "summary"
-                            };
-
-                            foreach (var key in contentKeys)
+                            // 1. Ưu tiên cao nhất: fb_caption (chuẩn format dành riêng cho Facebook)
+                            if (obj["fb_caption"] != null && !string.IsNullOrWhiteSpace(obj["fb_caption"].ToString()))
                             {
-                                if (obj[key] != null && !string.IsNullOrWhiteSpace(obj[key].ToString()))
-                                {
-                                    res.Content = obj[key].ToString().Trim();
-                                    break;
-                                }
+                                res.Content = obj["fb_caption"].ToString().Trim();
                             }
 
-                            // Tìm key ảnh đính kèm nếu có
-                            string[] imgKeys = new string[] {
-                                "image", "imageUrl", "image_url", "photo", "photoUrl", "photo_url", "picture", "thumb", "thumbnail", "media"
-                            };
+                            // 2. Trích xuất Title và Url
+                            if (obj["title"] != null) res.Title = obj["title"].ToString().Trim();
+                            if (obj["url"] != null) res.Url = obj["url"].ToString().Trim();
 
-                            foreach (var ikey in imgKeys)
+                            // 3. Nếu chưa có Content, tìm các key khác
+                            if (string.IsNullOrWhiteSpace(res.Content))
                             {
-                                if (obj[ikey] != null && !string.IsNullOrWhiteSpace(obj[ikey].ToString()))
+                                string[] contentKeys = new string[] {
+                                    "content", "text", "post", "body", "summary", "message", "caption", "status", "quote", "description"
+                                };
+
+                                foreach (var key in contentKeys)
                                 {
-                                    string imgVal = obj[ikey].ToString().Trim();
-                                    if (imgVal.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || imgVal.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                                    if (obj[key] != null && !string.IsNullOrWhiteSpace(obj[key].ToString()))
                                     {
-                                        res.ImageUrl = imgVal;
+                                        res.Content = obj[key].ToString().Trim();
                                         break;
                                     }
                                 }
+
+                                if (string.IsNullOrWhiteSpace(res.Content) && !string.IsNullOrWhiteSpace(res.Title))
+                                {
+                                    res.Content = res.Title + (!string.IsNullOrWhiteSpace(res.Url) ? "\n\n🔗 " + res.Url : "");
+                                }
+                            }
+
+                            // 4. Trích xuất danh sách link hình ảnh từ API (images array & thumbnail)
+                            JArray imgArr = obj["images"] as JArray;
+                            if (imgArr != null)
+                            {
+                                foreach (var im in imgArr)
+                                {
+                                    if (im != null)
+                                    {
+                                        string iStr = im.ToString().Trim();
+                                        if ((iStr.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || iStr.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) && !res.ImageUrls.Contains(iStr))
+                                        {
+                                            res.ImageUrls.Add(iStr);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (obj["thumbnail"] != null && !string.IsNullOrWhiteSpace(obj["thumbnail"].ToString()))
+                            {
+                                string thumb = obj["thumbnail"].ToString().Trim();
+                                if ((thumb.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || thumb.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) && !res.ImageUrls.Contains(thumb))
+                                {
+                                    res.ImageUrls.Insert(0, thumb);
+                                }
+                            }
+
+                            string[] singleImgKeys = new string[] { "image", "imageUrl", "image_url", "photo", "photoUrl", "picture" };
+                            foreach (var sk in singleImgKeys)
+                            {
+                                if (obj[sk] != null && !string.IsNullOrWhiteSpace(obj[sk].ToString()))
+                                {
+                                    string sVal = obj[sk].ToString().Trim();
+                                    if ((sVal.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || sVal.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) && !res.ImageUrls.Contains(sVal))
+                                    {
+                                        res.ImageUrls.Add(sVal);
+                                    }
+                                }
+                            }
+
+                            if (res.ImageUrls.Count > 0)
+                            {
+                                res.ImageUrl = res.ImageUrls[0];
                             }
                         }
 
@@ -1093,45 +1178,60 @@ namespace ADBLogin.Core.Automation
                     res.Content = rawResponse;
                 }
 
-                // Nếu có ảnh tải về từ API
-                if (!string.IsNullOrEmpty(res.ImageUrl))
+                // 5. Tự động tải toàn bộ hình ảnh từ link API về máy tạm
+                if (res.ImageUrls.Count > 0)
                 {
                     try
                     {
                         string tempDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp_downloads");
                         if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
 
-                        string ext = ".jpg";
-                        try
+                        int imgIdx = 1;
+                        foreach (var imgUrl in res.ImageUrls)
                         {
-                            string pathExt = Path.GetExtension(new Uri(res.ImageUrl).AbsolutePath);
-                            if (!string.IsNullOrEmpty(pathExt) && pathExt.Length <= 5) ext = pathExt;
-                        }
-                        catch { }
+                            try
+                            {
+                                string ext = ".jpg";
+                                try
+                                {
+                                    string pathExt = Path.GetExtension(new Uri(imgUrl).AbsolutePath);
+                                    if (!string.IsNullOrEmpty(pathExt) && pathExt.Length <= 5) ext = pathExt;
+                                }
+                                catch { }
 
-                        string localImgPath = Path.Combine(tempDir, string.Format("fb_post_{0}_{1}{2}", DateTime.Now.Ticks, Guid.NewGuid().ToString("N").Substring(0, 6), ext));
+                                string localImgPath = Path.Combine(tempDir, string.Format("fb_feed_{0}_{1}_{2}{3}", DateTime.Now.Ticks, imgIdx, Guid.NewGuid().ToString("N").Substring(0, 4), ext));
 
-                        using (WebClient wc = new WebClient())
-                        {
-                            wc.DownloadFile(res.ImageUrl, localImgPath);
-                        }
+                                using (WebClient wc = new WebClient())
+                                {
+                                    wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                                    wc.DownloadFile(imgUrl, localImgPath);
+                                }
 
-                        if (File.Exists(localImgPath) && new FileInfo(localImgPath).Length > 0)
-                        {
-                            res.DownloadedImagePath = localImgPath;
-                            DoLog(log, string.Format("[+] Đã tải ảnh từ API về: {0}", Path.GetFileName(localImgPath)));
+                                if (File.Exists(localImgPath) && new FileInfo(localImgPath).Length > 0)
+                                {
+                                    res.DownloadedImagePaths.Add(localImgPath);
+                                    if (string.IsNullOrEmpty(res.DownloadedImagePath)) res.DownloadedImagePath = localImgPath;
+                                    DoLog(log, string.Format("[+] Đã tải ảnh {0}/{1} từ API: {2}", imgIdx, res.ImageUrls.Count, Path.GetFileName(localImgPath)));
+                                }
+                            }
+                            catch (Exception exImg)
+                            {
+                                DoLog(log, string.Format("[!] Lỗi tải ảnh từ {0}: {1}", imgUrl, exImg.Message));
+                            }
+                            imgIdx++;
                         }
                     }
-                    catch (Exception exImg)
+                    catch (Exception exDir)
                     {
-                        DoLog(log, string.Format("[!] Không thể tải ảnh từ URL {0}: {1}", res.ImageUrl, exImg.Message));
+                        DoLog(log, "[!] Lỗi tạo thư mục tạm cho ảnh: " + exDir.Message);
                     }
                 }
 
                 if (!string.IsNullOrWhiteSpace(res.Content))
                 {
                     res.Success = true;
-                    DoLog(log, string.Format("[✓] Lấy bài viết từ API thành công! Độ dài: {0} ký tự", res.Content.Length));
+                    DoLog(log, string.Format("[✓] Lấy bài viết từ API thành công! Nội dung: {0} ký tự | Hình ảnh: {1} link ảnh",
+                        res.Content.Length, res.ImageUrls.Count));
                 }
                 else
                 {
