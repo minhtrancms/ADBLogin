@@ -17,7 +17,7 @@ namespace ADBLogin.Core.Services
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
-        public IWebDriver LaunchBrowser(UserProfile profile, string browserBinaryPath = null, int windowIndex = -1, int rows = 2, int columns = 4, bool isMobileMode = false)
+        public IWebDriver LaunchBrowser(UserProfile profile, string browserBinaryPath = null, int windowIndex = -1, int rows = 2, int columns = 4, bool isMobileMode = false, int debuggingPort = 0)
         {
             if (profile == null) throw new ArgumentNullException("profile");
 
@@ -65,6 +65,13 @@ namespace ADBLogin.Core.Services
 
             // Gan thu muc Profile
             options.AddArgument(string.Format("--user-data-dir={0}", profileDir));
+
+            // Mo Remote Debugging Port (CDP) cho phep automation ben ngoai (Python, Puppeteer, Playwright)
+            if (debuggingPort <= 0)
+            {
+                debuggingPort = FindFreeTcpPort();
+            }
+            options.AddArgument(string.Format("--remote-debugging-port={0}", debuggingPort));
 
             // Cau hinh Proxy qua CLI neu co
             if (proxy != null && proxy.IsEnabled)
@@ -164,8 +171,8 @@ namespace ADBLogin.Core.Services
                 _windowManager.ApplyWindowBounds(driver, windowIndex, rows, columns);
             }
 
-            // Dang ky phien trinh duyet vao SessionManager de theo doi va dong khi can
-            BrowserSessionManager.Instance.RegisterSession(profile.ProfileId, driver);
+            // Dang ky phien trinh duyet vao SessionManager de theo doi va dong khi can (kem Debugging Port)
+            BrowserSessionManager.Instance.RegisterSession(profile.ProfileId, driver, debuggingPort);
 
             return driver;
         }
@@ -190,6 +197,22 @@ namespace ADBLogin.Core.Services
             if (string.IsNullOrWhiteSpace(input)) return "144";
             var match = System.Text.RegularExpressions.Regex.Match(input, @"\d+");
             return match.Success ? match.Value : "144";
+        }
+
+        public static int FindFreeTcpPort()
+        {
+            try
+            {
+                var l = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+                l.Start();
+                int port = ((System.Net.IPEndPoint)l.LocalEndpoint).Port;
+                l.Stop();
+                return port;
+            }
+            catch
+            {
+                return new Random().Next(15000, 30000);
+            }
         }
     }
 }

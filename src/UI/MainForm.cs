@@ -32,6 +32,7 @@ namespace ADBLogin.UI
         private Button _btnOpenFolder;
         private Button _btnCopyProxy;
         private Button _btnRefresh;
+        private Button _btnFacebookAuto;
 
         private NumericUpDown _numRows;
         private NumericUpDown _numCols;
@@ -57,6 +58,7 @@ namespace ADBLogin.UI
             InitializeContextMenu();
             LoadData();
             InitializeStatusTimer();
+            LocalApiService.Instance.Start(5858);
         }
 
         private void InitializeForm()
@@ -191,6 +193,13 @@ namespace ADBLogin.UI
             _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 36, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
             _btnRefresh.Click += (s, e) => LoadData();
 
+            _btnFacebookAuto = CreateCompactButton("🤖 Auto FB", Color.FromArgb(24, 119, 242), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Facebook & Cổng CDP Studio", Color.FromArgb(13, 90, 190));
+            _btnFacebookAuto.Click += (s, e) =>
+            {
+                var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
+                fbForm.Show(this);
+            };
+
             // Group 4: Bộ chọn phiên bản Chrome / Orbita
             Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
             _cboBrowserVersion = new ComboBox
@@ -253,6 +262,8 @@ namespace ADBLogin.UI
             toolPanel.Controls.Add(_btnCheckAllProxy);
             toolPanel.Controls.Add(_btnCopyProxy);
             toolPanel.Controls.Add(_btnRefresh);
+            toolPanel.Controls.Add(CreateDivider());
+            toolPanel.Controls.Add(_btnFacebookAuto);
             toolPanel.Controls.Add(CreateDivider());
             toolPanel.Controls.Add(lblBrowser);
             toolPanel.Controls.Add(_cboBrowserVersion);
@@ -645,6 +656,34 @@ namespace ADBLogin.UI
             var itemStop = _contextMenu.Items.Add("⏹ Tắt trình duyệt này");
             itemStop.ForeColor = Color.FromArgb(220, 38, 38);
             itemStop.Click += BtnStop_Click;
+
+            var itemAutoFb = _contextMenu.Items.Add("🤖 Kịch bản Facebook (Auto FB)");
+            itemAutoFb.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemAutoFb.ForeColor = Color.FromArgb(24, 119, 242);
+            itemAutoFb.Click += (s, e) =>
+            {
+                var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
+                fbForm.Show(this);
+            };
+
+            var itemCopyCdp = _contextMenu.Items.Add("🌐 Sao chép Debugging Port (CDP)");
+            itemCopyCdp.Click += (s, e) =>
+            {
+                var selected = GetSelectedProfiles();
+                if (selected.Count > 0)
+                {
+                    int port = _sessionManager.GetDebuggingPort(selected[0].ProfileId);
+                    if (port > 0)
+                    {
+                        Clipboard.SetText(string.Format("http://127.0.0.1:{0}", port));
+                        MessageBox.Show(string.Format("Đã sao chép địa chỉ CDP: http://127.0.0.1:{0}", port), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Profile này chưa mở hoặc chưa có cổng CDP.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            };
 
             _contextMenu.Items.Add(new ToolStripSeparator());
 
@@ -1071,6 +1110,12 @@ namespace ADBLogin.UI
                 LoadData();
                 e.Handled = true;
             }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            LocalApiService.Instance.Stop();
+            base.OnFormClosing(e);
         }
 
         [STAThread]

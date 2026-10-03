@@ -16,6 +16,27 @@ namespace ADBLogin.Core.Services
         private readonly List<UserProfile> _profiles = new List<UserProfile>();
         private readonly object _syncLock = new object();
 
+        private static AccountManager _instance;
+        private static readonly object _instanceLock = new object();
+
+        public static AccountManager Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_instanceLock)
+                    {
+                        if (_instance == null)
+                        {
+                            _instance = new AccountManager();
+                        }
+                    }
+                }
+                return _instance;
+            }
+        }
+
         public IReadOnlyList<UserProfile> Profiles
         {
             get
@@ -24,6 +45,14 @@ namespace ADBLogin.Core.Services
                 {
                     return _profiles.AsReadOnly();
                 }
+            }
+        }
+
+        public List<UserProfile> GetAllProfiles()
+        {
+            lock (_syncLock)
+            {
+                return new List<UserProfile>(_profiles);
             }
         }
 

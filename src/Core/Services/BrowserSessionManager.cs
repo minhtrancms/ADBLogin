@@ -17,6 +17,8 @@ namespace ADBLogin.Core.Services
 
         // Luu tru cac doi tuong IWebDriver theo ProfileId
         private readonly ConcurrentDictionary<string, IWebDriver> _activeDrivers = new ConcurrentDictionary<string, IWebDriver>();
+        // Luu tru Debugging Port (CDP) theo ProfileId
+        private readonly ConcurrentDictionary<string, int> _activePorts = new ConcurrentDictionary<string, int>();
 
         public static BrowserSessionManager Instance
         {
@@ -41,7 +43,7 @@ namespace ADBLogin.Core.Services
         /// <summary>
         /// Dang ky phien trinh duyet moi vua khoi chay
         /// </summary>
-        public void RegisterSession(string profileId, IWebDriver driver)
+        public void RegisterSession(string profileId, IWebDriver driver, int debuggingPort = 0)
         {
             if (string.IsNullOrEmpty(profileId) || driver == null) return;
 
@@ -49,6 +51,32 @@ namespace ADBLogin.Core.Services
             CloseSession(profileId);
 
             _activeDrivers[profileId] = driver;
+            if (debuggingPort > 0)
+            {
+                _activePorts[profileId] = debuggingPort;
+            }
+        }
+
+        /// <summary>
+        /// Lay IWebDriver cua 1 profile dang mo
+        /// </summary>
+        public IWebDriver GetDriver(string profileId)
+        {
+            if (string.IsNullOrEmpty(profileId)) return null;
+            IWebDriver driver;
+            _activeDrivers.TryGetValue(profileId, out driver);
+            return driver;
+        }
+
+        /// <summary>
+        /// Lay Remote Debugging Port (CDP) cua profile dang mo
+        /// </summary>
+        public int GetDebuggingPort(string profileId)
+        {
+            if (string.IsNullOrEmpty(profileId)) return 0;
+            int port;
+            if (_activePorts.TryGetValue(profileId, out port)) return port;
+            return 0;
         }
 
         /// <summary>
@@ -87,6 +115,9 @@ namespace ADBLogin.Core.Services
             if (string.IsNullOrEmpty(profileId)) return false;
 
             IWebDriver driver;
+            int removedPort;
+            _activePorts.TryRemove(profileId, out removedPort);
+
             if (_activeDrivers.TryRemove(profileId, out driver))
             {
                 try
