@@ -11,6 +11,7 @@ namespace ADBLogin.UI
 {
     /// <summary>
     /// Giao diện điều khiển Đồng bộ Chuột & Phím thời gian thực (Multi-Control Synchronizer)
+    /// Đã tối ưu hóa bố cục linh hoạt (Fluid Responsive Layout), chống tràn tuyệt đối trên mọi màn hình.
     /// </summary>
     public class SynchronizerForm : Form
     {
@@ -66,8 +67,8 @@ namespace ADBLogin.UI
         private void InitializeComponent()
         {
             this.Text = "⚡ BỘ ĐỒNG BỘ THAO TÁC ĐA TRÌNH DUYỆT THỜI GIAN THỰC (MULTI-CONTROL SYNCHRONIZER)";
-            this.Size = new Size(1100, 750);
-            this.MinimumSize = new Size(950, 600);
+            this.Size = new Size(1180, 780);
+            this.MinimumSize = new Size(900, 580);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(243, 244, 246);
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
@@ -108,7 +109,7 @@ namespace ADBLogin.UI
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 420,
+                SplitterDistance = 330,
                 SplitterWidth = 6,
                 BackColor = Color.FromArgb(229, 231, 235)
             };
@@ -231,27 +232,35 @@ namespace ADBLogin.UI
             split.Panel1.Controls.Add(pnlLeft);
 
             // ================= RIGHT: REALTIME SYNC & COMMANDS =================
-            Panel pnlRight = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12), AutoScroll = true };
+            Panel pnlRight = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
 
-            // 1. HERO REALTIME SYNC PANEL
+            // 1. HERO REALTIME SYNC PANEL (RESPONSIVE)
             GroupBox grpRealtime = new GroupBox
             {
                 Text = "⚡ TÍNH NĂNG ĐỒNG BỘ THỜI GIAN THỰC (REALTIME INPUT MIRRORING)",
                 Dock = DockStyle.Top,
-                Height = 120,
+                Height = 115,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(79, 70, 229)
+                ForeColor = Color.FromArgb(79, 70, 229),
+                Padding = new Padding(12)
+            };
+
+            FlowLayoutPanel pnlRealtimeHeader = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 44,
+                WrapContents = true,
+                AutoSize = true
             };
 
             _btnToggleRealtime = new Button
             {
                 Text = "▶ BẬT ĐỒNG BỘ THỜI GIAN THỰC",
-                Location = new Point(16, 28),
-                Size = new Size(270, 42),
+                Size = new Size(260, 38),
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             _btnToggleRealtime.FlatAppearance.BorderSize = 0;
@@ -260,41 +269,53 @@ namespace ADBLogin.UI
             _lblRealtimeStatus = new Label
             {
                 Text = "● Đang tắt đồng bộ thời gian thực",
-                Location = new Point(300, 40),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Margin = new Padding(12, 10, 0, 0),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(107, 114, 128)
             };
+
+            pnlRealtimeHeader.Controls.Add(_btnToggleRealtime);
+            pnlRealtimeHeader.Controls.Add(_lblRealtimeStatus);
 
             Label lblRealtimeHelp = new Label
             {
                 Text = "💡 Hướng dẫn: Khi BẬT, bạn chỉ cần thao tác bình thường trên cửa sổ Master (Click, Cuộn chuột, Gõ chữ, Đổi link). Toàn bộ các máy Slaves sẽ tự động làm y hệt trong tích tắc!",
-                Location = new Point(16, 76),
-                Size = new Size(610, 36),
+                Dock = DockStyle.Bottom,
+                Height = 36,
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
                 ForeColor = Color.FromArgb(75, 85, 99)
             };
 
-            grpRealtime.Controls.Add(_btnToggleRealtime);
-            grpRealtime.Controls.Add(_lblRealtimeStatus);
             grpRealtime.Controls.Add(lblRealtimeHelp);
+            grpRealtime.Controls.Add(pnlRealtimeHeader);
             pnlRight.Controls.Add(grpRealtime);
 
-            // 2. MANUAL COMMANDS PANEL
+            // 2. MANUAL COMMANDS PANEL (RESPONSIVE FLUID ROWS)
             GroupBox grpManual = new GroupBox
             {
                 Text = "🎯 THAO TÁC ĐỒNG BỘ THỦ CÔNG (INSTANT BROADCAST)",
                 Dock = DockStyle.Top,
-                Height = 250,
+                Height = 270,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
                 Padding = new Padding(12)
             };
 
-            // A. URL
-            Label lblUrl = new Label { Text = "🌐 Mở trang Web (URL):", Location = new Point(14, 26), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
-            _txtUrl = new TextBox { Location = new Point(16, 46), Width = 450, Height = 26, Font = new Font("Segoe UI", 9F), Text = "https://www.google.com" };
-            _btnSyncUrl = new Button { Text = "🚀 Mở Tất Cả", Location = new Point(472, 44), Width = 150, Height = 28, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // ROW 1: URL Navigation
+            Label lblUrl = new Label { Text = "🌐 Mở trang Web (URL):", Dock = DockStyle.Top, Height = 20, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
+            Panel pnlUrlRow = new Panel { Dock = DockStyle.Top, Height = 32, Padding = new Padding(0, 2, 0, 4) };
+            _btnSyncUrl = new Button
+            {
+                Text = "🚀 Mở Tất Cả",
+                Dock = DockStyle.Right,
+                Width = 120,
+                BackColor = Color.FromArgb(79, 70, 229),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
             _btnSyncUrl.FlatAppearance.BorderSize = 0;
             _btnSyncUrl.Click += delegate
             {
@@ -302,9 +323,23 @@ namespace ADBLogin.UI
                 _syncService.SyncNavigate(_txtUrl.Text);
             };
 
-            // B. Quick buttons (Scroll, Refresh, Click center)
-            Label lblQuick = new Label { Text = "📜 Thao tác nhanh:", Location = new Point(14, 82), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
-            FlowLayoutPanel pnlQuickBtns = new FlowLayoutPanel { Location = new Point(16, 102), Width = 610, Height = 34, WrapContents = false };
+            _txtUrl = new TextBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 9F), Text = "https://www.google.com" };
+
+            // Panel wrap to ensure margin between textbox and button
+            Panel pnlUrlFill = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 8, 0) };
+            pnlUrlFill.Controls.Add(_txtUrl);
+            pnlUrlRow.Controls.Add(pnlUrlFill);
+            pnlUrlRow.Controls.Add(_btnSyncUrl);
+
+            // ROW 2: Quick buttons
+            Label lblQuick = new Label { Text = "📜 Thao tác nhanh (Cuộn trang, Làm mới, Click):", Dock = DockStyle.Top, Height = 22, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Padding = new Padding(0, 4, 0, 0) };
+            FlowLayoutPanel pnlQuickBtns = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                WrapContents = true,
+                AutoSize = true
+            };
 
             _btnScrollDown = new Button { Text = "↓ Cuộn Xuống (+400px)", Width = 145, Height = 28, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8F, FontStyle.Bold) };
             _btnScrollDown.Click += delegate { ApplySlaves(); _syncService.SyncScroll(400); };
@@ -323,10 +358,20 @@ namespace ADBLogin.UI
             pnlQuickBtns.Controls.Add(_btnRefreshAll);
             pnlQuickBtns.Controls.Add(_btnClickCenter);
 
-            // C. Text send
-            Label lblText = new Label { Text = "⌨️ Gửi chuỗi văn bản vào ô đang trỏ:", Location = new Point(14, 142), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
-            _txtSendText = new TextBox { Location = new Point(16, 162), Width = 450, Height = 26, Font = new Font("Segoe UI", 9F), Text = "Xin chào" };
-            _btnSendText = new Button { Text = "✍️ Gửi Văn Bản", Location = new Point(472, 160), Width = 150, Height = 28, BackColor = Color.FromArgb(16, 185, 129), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Cursor = Cursors.Hand };
+            // ROW 3: Text send
+            Label lblText = new Label { Text = "⌨️ Gửi chuỗi văn bản vào ô đang trỏ:", Dock = DockStyle.Top, Height = 22, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Padding = new Padding(0, 4, 0, 0) };
+            Panel pnlTextRow = new Panel { Dock = DockStyle.Top, Height = 32, Padding = new Padding(0, 2, 0, 4) };
+            _btnSendText = new Button
+            {
+                Text = "✍️ Gửi Văn Bản",
+                Dock = DockStyle.Right,
+                Width = 120,
+                BackColor = Color.FromArgb(16, 185, 129),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
             _btnSendText.FlatAppearance.BorderSize = 0;
             _btnSendText.Click += delegate
             {
@@ -334,27 +379,43 @@ namespace ADBLogin.UI
                 _syncService.SyncSendText(_txtSendText.Text);
             };
 
-            // D. JS Execute
-            Label lblJs = new Label { Text = "💻 Thực thi JavaScript:", Location = new Point(14, 196), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
-            _txtCustomJs = new TextBox { Location = new Point(16, 216), Width = 450, Height = 26, Font = new Font("Segoe UI", 9F), Text = "window.scrollTo(0, document.body.scrollHeight);" };
-            _btnRunJs = new Button { Text = "⚡ Chạy JS", Location = new Point(472, 214), Width = 150, Height = 28, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
+            _txtSendText = new TextBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 9F), Text = "Xin chào" };
+            Panel pnlTextFill = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 8, 0) };
+            pnlTextFill.Controls.Add(_txtSendText);
+            pnlTextRow.Controls.Add(pnlTextFill);
+            pnlTextRow.Controls.Add(_btnSendText);
+
+            // ROW 4: JS Execute
+            Label lblJs = new Label { Text = "💻 Thực thi JavaScript:", Dock = DockStyle.Top, Height = 22, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Padding = new Padding(0, 4, 0, 0) };
+            Panel pnlJsRow = new Panel { Dock = DockStyle.Top, Height = 32, Padding = new Padding(0, 2, 0, 4) };
+            _btnRunJs = new Button
+            {
+                Text = "⚡ Chạy JS",
+                Dock = DockStyle.Right,
+                Width = 120,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
             _btnRunJs.Click += delegate
             {
                 ApplySlaves();
                 _syncService.SyncExecuteScript(_txtCustomJs.Text);
             };
 
-            grpManual.Controls.Add(lblUrl);
-            grpManual.Controls.Add(_txtUrl);
-            grpManual.Controls.Add(_btnSyncUrl);
-            grpManual.Controls.Add(lblQuick);
-            grpManual.Controls.Add(pnlQuickBtns);
-            grpManual.Controls.Add(lblText);
-            grpManual.Controls.Add(_txtSendText);
-            grpManual.Controls.Add(_btnSendText);
+            _txtCustomJs = new TextBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 9F), Text = "window.scrollTo(0, document.body.scrollHeight);" };
+            Panel pnlJsFill = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 8, 0) };
+            pnlJsFill.Controls.Add(_txtCustomJs);
+            pnlJsRow.Controls.Add(pnlJsFill);
+            pnlJsRow.Controls.Add(_btnRunJs);
+
+            grpManual.Controls.Add(pnlJsRow);
             grpManual.Controls.Add(lblJs);
-            grpManual.Controls.Add(_txtCustomJs);
-            grpManual.Controls.Add(_btnRunJs);
+            grpManual.Controls.Add(pnlTextRow);
+            grpManual.Controls.Add(lblText);
+            grpManual.Controls.Add(pnlQuickBtns);
+            grpManual.Controls.Add(lblQuick);
+            grpManual.Controls.Add(pnlUrlRow);
+            grpManual.Controls.Add(lblUrl);
             pnlRight.Controls.Add(grpManual);
 
             // 3. LOG CONSOLE PANEL
@@ -380,6 +441,10 @@ namespace ADBLogin.UI
             pnlLog.Controls.Add(_rtbLog);
             pnlLog.Controls.Add(pnlLogBar);
             pnlRight.Controls.Add(pnlLog);
+
+            pnlLog.BringToFront();
+            grpManual.BringToFront();
+            grpRealtime.BringToFront();
 
             split.Panel2.Controls.Add(pnlRight);
         }
