@@ -54,8 +54,15 @@ namespace ADBLogin.Tests
             var captcha = new CaptchaSolverService();
             Console.WriteLine("  -> Services initialized successfully!");
 
+            Console.WriteLine("[TEST 11] Instantiating MainForm (2-Tier UI Toolbar)...");
+            using (var f = new MainForm())
+            {
+                IntPtr h = f.Handle;
+                Console.WriteLine("  -> MainForm Handle: " + h + ", Control Count: " + f.Controls.Count);
+            }
+
             Console.WriteLine("\n=======================================================");
-            Console.WriteLine("  [ALL 10 TESTS PASSED WITH 100% SUCCESSFUL INITIALIZATION!]");
+            Console.WriteLine("  [ALL 11 TESTS PASSED WITH 100% SUCCESSFUL INITIALIZATION!]");
             Console.WriteLine("=======================================================");
         }
     }

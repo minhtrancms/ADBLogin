@@ -36,7 +36,10 @@ namespace ADBLogin.UI
         private Button _btnGoogleAuto;
         private Button _btnTikTokAuto;
         private Button _btnShopeeAuto;
-        private Button _btnMoreTools;
+        private Button _btnTwitterAuto;
+        private Button _btnTelegramAuto;
+        private Button _btnSync;
+        private Button _btnAdvSettings;
 
         private NumericUpDown _numRows;
         private NumericUpDown _numCols;
@@ -146,188 +149,71 @@ namespace ADBLogin.UI
             headerPanel.Controls.Add(_lblStatsRunning);
             headerPanel.Controls.Add(_lblStatsProxy);
             headerPanel.Controls.Add(searchBoxPanel);
+            headerPanel.Resize += (s, e) =>
+            {
+                searchBoxPanel.Location = new Point(headerPanel.ClientSize.Width - searchBoxPanel.Width - 14, 9);
+            };
 
-            // ================= 2. TOOLBAR PANEL (BỘ NÚT TINH TẾ, CHUẨN WINDOWS 11) =================
-            Panel toolPanel = new Panel
+            // ================= 2. TOOLBAR 1: QUẢN LÝ PROFILE & MÔI TRƯỜNG =================
+            Panel pnlProfileBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 43,
+                Height = 38,
                 BackColor = Color.White,
-                Padding = new Padding(8, 6, 8, 6)
+                Padding = new Padding(8, 4, 8, 4)
+            };
+            pnlProfileBar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240)), 0, pnlProfileBar.Height - 1, pnlProfileBar.Width, pnlProfileBar.Height - 1);
             };
 
             ToolTip toolTip = new ToolTip();
 
             // Group 1: Vận hành (Run Control)
-            _btnLaunch = CreateCompactButton("▶ Mở", Color.FromArgb(16, 185, 129), Color.White, 68, true, "Khởi chạy các profile đã chọn (Enter)", Color.FromArgb(5, 150, 105));
+            _btnLaunch = CreateCompactButton("▶ Mở", Color.FromArgb(16, 185, 129), Color.White, 62, true, "Khởi chạy các profile đã chọn (Enter)", Color.FromArgb(5, 150, 105));
             _btnLaunch.Click += BtnLaunch_Click;
 
-            _btnStop = CreateCompactButton("⏹ Tắt", Color.FromArgb(239, 68, 68), Color.White, 58, true, "Đóng trình duyệt profile đang chọn", Color.FromArgb(220, 38, 38));
+            _btnStop = CreateCompactButton("⏹ Tắt", Color.FromArgb(239, 68, 68), Color.White, 54, true, "Đóng trình duyệt profile đang chọn", Color.FromArgb(220, 38, 38));
             _btnStop.Click += BtnStop_Click;
 
-            _btnStopAll = CreateCompactButton("Tắt Hết", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 62, false, "Đóng tất cả các trình duyệt đang mở", Color.FromArgb(254, 226, 226));
+            _btnStopAll = CreateCompactButton("Tắt Hết", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 58, false, "Đóng tất cả các trình duyệt đang mở", Color.FromArgb(254, 226, 226));
             _btnStopAll.Click += BtnStopAll_Click;
 
             // Group 2: Thao tác Profile
-            _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(99, 102, 241), Color.White, 88, true, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(79, 70, 229));
+            _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(99, 102, 241), Color.White, 84, true, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(79, 70, 229));
             _btnAutoCreate.Click += BtnAutoCreate_Click;
 
-            _btnAdd = CreateCompactButton("+ Thêm", Color.FromArgb(37, 99, 235), Color.White, 62, true, "Thêm một profile mới thủ công", Color.FromArgb(29, 78, 216));
+            _btnAdd = CreateCompactButton("+ Thêm", Color.FromArgb(37, 99, 235), Color.White, 58, true, "Thêm một profile mới thủ công", Color.FromArgb(29, 78, 216));
             _btnAdd.Click += BtnAdd_Click;
 
-            _btnEdit = CreateCompactButton("✏️ Sửa", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 54, false, "Chỉnh sửa cấu hình profile đang chọn", Color.FromArgb(241, 245, 249));
+            _btnEdit = CreateCompactButton("✏️ Sửa", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 50, false, "Chỉnh sửa cấu hình profile đang chọn", Color.FromArgb(241, 245, 249));
             _btnEdit.Click += BtnEdit_Click;
 
-            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 54, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
+            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 50, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
             _btnDelete.Click += BtnDelete_Click;
 
-            _btnOpenFolder = CreateCompactButton("📁 File", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 54, false, "Mở thư mục lưu trữ profile trên máy", Color.FromArgb(241, 245, 249));
+            _btnOpenFolder = CreateCompactButton("📁 File", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 48, false, "Mở thư mục lưu trữ profile trên máy", Color.FromArgb(241, 245, 249));
             _btnOpenFolder.Click += BtnOpenFolder_Click;
 
             // Group 3: Proxy & Công cụ
-            _btnCheckProxy = CreateCompactButton("⚡ Check", Color.FromArgb(245, 158, 11), Color.White, 64, true, "Kiểm tra Proxy các profile được chọn", Color.FromArgb(217, 119, 6));
+            _btnCheckProxy = CreateCompactButton("⚡ Check", Color.FromArgb(245, 158, 11), Color.White, 60, true, "Kiểm tra Proxy các profile được chọn", Color.FromArgb(217, 119, 6));
             _btnCheckProxy.Click += BtnCheckProxy_Click;
 
-            _btnCheckAllProxy = CreateCompactButton("Tất Cả", Color.FromArgb(255, 251, 235), Color.FromArgb(180, 83, 9), 55, false, "Kiểm tra Proxy toàn bộ danh sách profile", Color.FromArgb(254, 243, 199));
+            _btnCheckAllProxy = CreateCompactButton("Tất Cả", Color.FromArgb(255, 251, 235), Color.FromArgb(180, 83, 9), 50, false, "Kiểm tra Proxy toàn bộ danh sách profile", Color.FromArgb(254, 243, 199));
             _btnCheckAllProxy.Click += BtnCheckAllProxy_Click;
 
-            _btnCopyProxy = CreateCompactButton("📋 Copy", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 56, false, "Sao chép Proxy vào Clipboard", Color.FromArgb(241, 245, 249));
+            _btnCopyProxy = CreateCompactButton("📋 Copy", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Sao chép Proxy vào Clipboard", Color.FromArgb(241, 245, 249));
             _btnCopyProxy.Click += BtnCopyProxy_Click;
 
-            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 36, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
+            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 30, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
             _btnRefresh.Click += (s, e) => LoadData();
-
-            _btnFacebookAuto = CreateCompactButton("🤖 Auto FB", Color.FromArgb(24, 119, 242), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Facebook & Cổng CDP Studio", Color.FromArgb(13, 90, 190));
-            _btnFacebookAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
-                    fbForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto FB:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnGoogleAuto = CreateCompactButton("🌐 Auto Google", Color.FromArgb(234, 67, 53), Color.White, 96, true, "Mở Bộ Công Cụ Tự Động Hóa Google & Gmail Studio", Color.FromArgb(200, 45, 35));
-            _btnGoogleAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var googleForm = new GoogleAutomationForm(_accountManager.GetAllProfiles());
-                    googleForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Google:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnTikTokAuto = CreateCompactButton("🎵 Auto TikTok", Color.FromArgb(15, 23, 42), Color.White, 94, true, "Mở Bộ Công Cụ Tự Động Hóa TikTok & FYP Studio", Color.FromArgb(30, 41, 59));
-            _btnTikTokAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var ttForm = new TikTokAutomationForm(_accountManager.GetAllProfiles());
-                    ttForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto TikTok:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnShopeeAuto = CreateCompactButton("🛒 Shopee", Color.FromArgb(238, 77, 45), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Shopee & Seeding", Color.FromArgb(200, 60, 35));
-            _btnShopeeAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var shopeeForm = new ShopeeAutomationForm(_accountManager.GetAllProfiles());
-                    shopeeForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Shopee:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            ContextMenuStrip moreToolsMenu = new ContextMenuStrip();
-            moreToolsMenu.Font = new Font("Segoe UI", 9F);
-
-            var miTwitter = moreToolsMenu.Items.Add("🐦 Kịch bản X / Twitter (Airdrop)");
-            miTwitter.Click += (s, e) =>
-            {
-                try
-                {
-                    var twForm = new TwitterAutomationForm(_accountManager.GetAllProfiles());
-                    twForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Twitter:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            var miTelegram = moreToolsMenu.Items.Add("✈️ Kịch bản Telegram Web Automation");
-            miTelegram.Click += (s, e) =>
-            {
-                try
-                {
-                    var tgForm = new TelegramAutomationForm(_accountManager.GetAllProfiles());
-                    tgForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Telegram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            moreToolsMenu.Items.Add(new ToolStripSeparator());
-
-            var miSync = moreToolsMenu.Items.Add("⚡ Đồng Bộ Chuột & Phím (Synchronizer)");
-            miSync.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            miSync.ForeColor = Color.FromArgb(99, 102, 241);
-            miSync.Click += (s, e) =>
-            {
-                try
-                {
-                    var syncForm = new SynchronizerForm(_accountManager.GetAllProfiles());
-                    syncForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            var miSettings = moreToolsMenu.Items.Add("⚙️ Cấu Hình Proxy Xoay & Tự Động Giải Captcha");
-            miSettings.Click += (s, e) =>
-            {
-                try
-                {
-                    var setForm = new AdvancedSettingsForm();
-                    setForm.ShowDialog(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở cấu hình:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnMoreTools = CreateCompactButton("⚡ Siêu Tool ▼", Color.FromArgb(99, 102, 241), Color.White, 98, true, "Mở rộng: X/Twitter, Telegram, Đồng bộ chuột/phím, Proxy xoay & Captcha", Color.FromArgb(79, 70, 229));
-            _btnMoreTools.Click += (s, e) =>
-            {
-                moreToolsMenu.Show(_btnMoreTools, new Point(0, _btnMoreTools.Height));
-            };
 
             // Group 4: Bộ chọn phiên bản Chrome / Orbita
             Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
             _cboBrowserVersion = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 135,
+                Width = 125,
                 Height = 24,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -336,7 +222,7 @@ namespace ADBLogin.UI
             PopulateBrowserVersions();
             _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
 
-            // Group 5: Chế độ Mobile & Lưới
+            // Group 5: Chế độ Mobile & Lưới Phone Farm
             _chkMobileMode = new CheckBox
             {
                 Text = "📱 Mobile",
@@ -348,9 +234,9 @@ namespace ADBLogin.UI
             };
 
             Label lblGridConfig = new Label { Text = "Lưới:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
-            _numRows = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 34, Height = 22, Font = new Font("Segoe UI", 8.5F) };
+            _numRows = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 32, Height = 22, Font = new Font("Segoe UI", 8.5F) };
             Label lblRowUnit = new Label { Text = "x", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
-            _numCols = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 4, Width = 34, Height = 22, Font = new Font("Segoe UI", 8.5F) };
+            _numCols = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 4, Width = 32, Height = 22, Font = new Font("Segoe UI", 8.5F) };
 
             toolTip.SetToolTip(_chkMobileMode, "Chế độ giao diện điện thoại (Scale 70%, tự động xếp 1 hàng 6 máy)");
             toolTip.SetToolTip(_numRows, "Số hàng (Rows)");
@@ -370,39 +256,181 @@ namespace ADBLogin.UI
                 }
             };
 
-            toolPanel.Controls.Add(_btnLaunch);
-            toolPanel.Controls.Add(_btnStop);
-            toolPanel.Controls.Add(_btnStopAll);
-            toolPanel.Controls.Add(CreateDivider());
-            toolPanel.Controls.Add(_btnAutoCreate);
-            toolPanel.Controls.Add(_btnAdd);
-            toolPanel.Controls.Add(_btnEdit);
-            toolPanel.Controls.Add(_btnDelete);
-            toolPanel.Controls.Add(_btnOpenFolder);
-            toolPanel.Controls.Add(CreateDivider());
-            toolPanel.Controls.Add(_btnCheckProxy);
-            toolPanel.Controls.Add(_btnCheckAllProxy);
-            toolPanel.Controls.Add(_btnCopyProxy);
-            toolPanel.Controls.Add(_btnRefresh);
-            toolPanel.Controls.Add(CreateDivider());
-            toolPanel.Controls.Add(_btnFacebookAuto);
-            toolPanel.Controls.Add(_btnGoogleAuto);
-            toolPanel.Controls.Add(_btnTikTokAuto);
-            toolPanel.Controls.Add(_btnShopeeAuto);
-            toolPanel.Controls.Add(_btnMoreTools);
-            toolPanel.Controls.Add(CreateDivider());
-            toolPanel.Controls.Add(lblBrowser);
-            toolPanel.Controls.Add(_cboBrowserVersion);
-            toolPanel.Controls.Add(CreateDivider());
-            toolPanel.Controls.Add(_chkMobileMode);
-            toolPanel.Controls.Add(lblGridConfig);
-            toolPanel.Controls.Add(_numRows);
-            toolPanel.Controls.Add(lblRowUnit);
-            toolPanel.Controls.Add(_numCols);
+            pnlProfileBar.Controls.Add(_btnLaunch);
+            pnlProfileBar.Controls.Add(_btnStop);
+            pnlProfileBar.Controls.Add(_btnStopAll);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(_btnAutoCreate);
+            pnlProfileBar.Controls.Add(_btnAdd);
+            pnlProfileBar.Controls.Add(_btnEdit);
+            pnlProfileBar.Controls.Add(_btnDelete);
+            pnlProfileBar.Controls.Add(_btnOpenFolder);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(_btnCheckProxy);
+            pnlProfileBar.Controls.Add(_btnCheckAllProxy);
+            pnlProfileBar.Controls.Add(_btnCopyProxy);
+            pnlProfileBar.Controls.Add(_btnRefresh);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(lblBrowser);
+            pnlProfileBar.Controls.Add(_cboBrowserVersion);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(_chkMobileMode);
+            pnlProfileBar.Controls.Add(lblGridConfig);
+            pnlProfileBar.Controls.Add(_numRows);
+            pnlProfileBar.Controls.Add(lblRowUnit);
+            pnlProfileBar.Controls.Add(_numCols);
 
-            LayoutCompactToolbar(toolPanel);
+            LayoutCompactToolbar(pnlProfileBar);
+            pnlProfileBar.Resize += (s, e) => LayoutCompactToolbar(pnlProfileBar);
 
-            // ================= 3. DATAGRIDVIEW (TEXT NHỎ GỌN, DỄ NHÌN) =================
+            // ================= 3. TOOLBAR 2: TRUNG TÂM AUTOMATION & MMO STUDIO =================
+            Panel pnlAutomationBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 38,
+                BackColor = Color.FromArgb(248, 250, 252),
+                Padding = new Padding(8, 4, 8, 4)
+            };
+            pnlAutomationBar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240)), 0, pnlAutomationBar.Height - 1, pnlAutomationBar.Width, pnlAutomationBar.Height - 1);
+            };
+
+            Label lblAutoTitle = new Label
+            {
+                Text = "⚡ KỊCH BẢN MMO:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105)
+            };
+
+            _btnFacebookAuto = CreateCompactButton("📘 Auto FB", Color.FromArgb(24, 119, 242), Color.White, 86, true, "Mở Bộ Công Cụ Tự Động Hóa Facebook & CDP Studio", Color.FromArgb(13, 90, 190));
+            _btnFacebookAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
+                    fbForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto FB:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnGoogleAuto = CreateCompactButton("🌐 Auto Google", Color.FromArgb(234, 67, 53), Color.White, 98, true, "Mở Bộ Công Cụ Tự Động Hóa Google & Gmail Studio", Color.FromArgb(200, 45, 35));
+            _btnGoogleAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var googleForm = new GoogleAutomationForm(_accountManager.GetAllProfiles());
+                    googleForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Google:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnTikTokAuto = CreateCompactButton("🎵 Auto TikTok", Color.FromArgb(15, 23, 42), Color.White, 90, true, "Mở Bộ Công Cụ Tự Động Hóa TikTok & FYP Studio", Color.FromArgb(30, 41, 59));
+            _btnTikTokAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var ttForm = new TikTokAutomationForm(_accountManager.GetAllProfiles());
+                    ttForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto TikTok:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnShopeeAuto = CreateCompactButton("🛒 Shopee", Color.FromArgb(238, 77, 45), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Shopee (Cày Xu, Săn Voucher, Seeding)", Color.FromArgb(200, 60, 35));
+            _btnShopeeAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var shopeeForm = new ShopeeAutomationForm(_accountManager.GetAllProfiles());
+                    shopeeForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Shopee:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnTwitterAuto = CreateCompactButton("🐦 X / Twitter", Color.FromArgb(29, 155, 240), Color.White, 88, true, "Mở Bộ Công Cụ Tự Động Hóa X / Twitter (Airdrop, Follow, Retweet, Tweet)", Color.FromArgb(20, 130, 210));
+            _btnTwitterAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var twForm = new TwitterAutomationForm(_accountManager.GetAllProfiles());
+                    twForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Twitter:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnTelegramAuto = CreateCompactButton("✈️ Telegram", Color.FromArgb(34, 158, 217), Color.White, 86, true, "Mở Bộ Công Cụ Tự Động Hóa Telegram Web (Join Channel, Reaction)", Color.FromArgb(25, 135, 190));
+            _btnTelegramAuto.Click += (s, e) =>
+            {
+                try
+                {
+                    var tgForm = new TelegramAutomationForm(_accountManager.GetAllProfiles());
+                    tgForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Telegram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnSync = CreateCompactButton("⚡ Đồng Bộ (Sync)", Color.FromArgb(99, 102, 241), Color.White, 105, true, "Đồng bộ thao tác chuột & phím từ 1 Master sang hàng loạt Slaves", Color.FromArgb(79, 70, 229));
+            _btnSync.Click += (s, e) =>
+            {
+                try
+                {
+                    var syncForm = new SynchronizerForm(_accountManager.GetAllProfiles());
+                    syncForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở giao diện Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            _btnAdvSettings = CreateCompactButton("⚙️ Xoay Proxy & Captcha", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 140, false, "Cấu hình API Xoay Proxy động (TMProxy, Tinsoft...) & Tự động giải Captcha", Color.FromArgb(226, 232, 240));
+            _btnAdvSettings.Click += (s, e) =>
+            {
+                try
+                {
+                    var setForm = new AdvancedSettingsForm();
+                    setForm.ShowDialog(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở cấu hình:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            pnlAutomationBar.Controls.Add(lblAutoTitle);
+            pnlAutomationBar.Controls.Add(_btnFacebookAuto);
+            pnlAutomationBar.Controls.Add(_btnGoogleAuto);
+            pnlAutomationBar.Controls.Add(_btnTikTokAuto);
+            pnlAutomationBar.Controls.Add(_btnShopeeAuto);
+            pnlAutomationBar.Controls.Add(_btnTwitterAuto);
+            pnlAutomationBar.Controls.Add(_btnTelegramAuto);
+            pnlAutomationBar.Controls.Add(CreateDivider());
+            pnlAutomationBar.Controls.Add(_btnSync);
+            pnlAutomationBar.Controls.Add(_btnAdvSettings);
+
+            LayoutCompactToolbar(pnlAutomationBar);
+            pnlAutomationBar.Resize += (s, e) => LayoutCompactToolbar(pnlAutomationBar);
+
+            // ================= 4. DATAGRIDVIEW (TEXT NHỎ GỌN, DỄ NHÌN) =================
             _grid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -454,7 +482,7 @@ namespace ADBLogin.UI
             _grid.KeyDown += Grid_KeyDown;
             _grid.CellPainting += Grid_CellPainting;
 
-            // ================= 4. STATUS BAR =================
+            // ================= 5. STATUS BAR =================
             _lblStatus = new Label
             {
                 Dock = DockStyle.Bottom,
@@ -468,7 +496,8 @@ namespace ADBLogin.UI
             };
 
             this.Controls.Add(_grid);
-            this.Controls.Add(toolPanel);
+            this.Controls.Add(pnlAutomationBar);
+            this.Controls.Add(pnlProfileBar);
             this.Controls.Add(headerPanel);
             this.Controls.Add(_lblStatus);
         }
@@ -492,7 +521,7 @@ namespace ADBLogin.UI
             Button btn = new Button
             {
                 Text = text,
-                Size = new Size(width, 29),
+                Size = new Size(width, 28),
                 BackColor = backColor,
                 ForeColor = foreColor,
                 FlatStyle = FlatStyle.Flat,
@@ -546,32 +575,32 @@ namespace ADBLogin.UI
             {
                 if (c is Button)
                 {
-                    c.Location = new Point(currentX, 7);
+                    c.Location = new Point(currentX, 5);
                     currentX += c.Width + gap;
                 }
                 else if (c is Panel && c.Width == 1) // Divider
                 {
-                    c.Location = new Point(currentX + 2, 11);
+                    c.Location = new Point(currentX + 2, 9);
                     currentX += 7;
                 }
                 else if (c is CheckBox)
                 {
-                    c.Location = new Point(currentX + 2, 11);
+                    c.Location = new Point(currentX + 2, 9);
                     currentX += c.Width + gap + 3;
                 }
                 else if (c is NumericUpDown)
                 {
-                    c.Location = new Point(currentX, 10);
+                    c.Location = new Point(currentX, 8);
                     currentX += c.Width + gap;
                 }
                 else if (c is Label)
                 {
-                    c.Location = new Point(currentX, 13);
+                    c.Location = new Point(currentX, 11);
                     currentX += c.Width + gap;
                 }
                 else if (c is ComboBox)
                 {
-                    c.Location = new Point(currentX, 10);
+                    c.Location = new Point(currentX, 7);
                     currentX += c.Width + gap;
                 }
             }
