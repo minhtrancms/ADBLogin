@@ -34,30 +34,39 @@ namespace ADBLogin.Core.Services
             var list = new List<BrowserVersionInfo>();
             var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Quét các phiên bản Orbita đã được cài đặt trong ~/.gologin/browser/
-            if (Directory.Exists(GoLoginBrowserDir))
+            // 1. Quét các phiên bản Orbita trong thư mục ứng dụng nội bộ và ~/.gologin/browser/
+            string[] localSearchDirs = new string[]
             {
-                var dirs = Directory.GetDirectories(GoLoginBrowserDir, "orbita-browser-*");
-                // Sắp xếp giảm dần theo phiên bản (144, 143, 142...)
-                Array.Sort(dirs);
-                Array.Reverse(dirs);
+                Path.Combine(AppBaseDir, "Gologin"),
+                AppBaseDir,
+                GoLoginBrowserDir
+            };
 
-                foreach (var dir in dirs)
+            foreach (var baseDir in localSearchDirs)
+            {
+                if (Directory.Exists(baseDir))
                 {
-                    string dirName = Path.GetFileName(dir); // ví dụ: orbita-browser-144
-                    string ver = dirName.Replace("orbita-browser-", "").Trim();
-                    string exe = Path.Combine(dir, "chrome.exe");
+                    var dirs = Directory.GetDirectories(baseDir, "orbita-browser-*");
+                    Array.Sort(dirs);
+                    Array.Reverse(dirs);
 
-                    if (File.Exists(exe))
+                    foreach (var dir in dirs)
                     {
-                        seenKeys.Add(ver);
-                        list.Add(new BrowserVersionInfo
+                        string dirName = Path.GetFileName(dir); // ví dụ: orbita-browser-144
+                        string ver = dirName.Replace("orbita-browser-", "").Trim();
+                        string exe = Path.Combine(dir, "chrome.exe");
+
+                        if (File.Exists(exe) && !seenKeys.Contains(ver))
                         {
-                            DisplayName = string.Format("Orbita {0} (Đã cài đặt)", ver),
-                            VersionKey = ver,
-                            ExecutablePath = exe,
-                            IsInstalled = true
-                        });
+                            seenKeys.Add(ver);
+                            list.Add(new BrowserVersionInfo
+                            {
+                                DisplayName = string.Format("Orbita {0} (Đã cài đặt)", ver),
+                                VersionKey = ver,
+                                ExecutablePath = exe,
+                                IsInstalled = true
+                            });
+                        }
                     }
                 }
             }
@@ -88,7 +97,7 @@ namespace ADBLogin.Core.Services
                 }
             }
 
-            // Đảm bảo luôn có ít nhất Orbita 144 và 143 trong danh sách
+            // Đảm bảo luôn có ít nhất Orbita 144 trong danh sách
             if (!seenKeys.Contains("144"))
             {
                 list.Insert(0, new BrowserVersionInfo
@@ -174,14 +183,17 @@ namespace ADBLogin.Core.Services
                 if (!string.IsNullOrEmpty(chrome)) return chrome;
             }
 
-            // Xử lý Orbita Browser
-            string targetFolder = Path.Combine(GoLoginBrowserDir, string.Format("orbita-browser-{0}", verKey));
-            string targetExe = Path.Combine(targetFolder, "chrome.exe");
-
-            // Nếu đã tồn tại file chrome.exe của phiên bản đó
-            if (File.Exists(targetExe))
+            // Xử lý Orbita Browser: tìm chrome.exe trong các thư mục khả dĩ
+            string[] possibleExePaths = new string[]
             {
-                return targetExe;
+                Path.Combine(AppBaseDir, "Gologin", string.Format("orbita-browser-{0}", verKey), "chrome.exe"),
+                Path.Combine(AppBaseDir, string.Format("orbita-browser-{0}", verKey), "chrome.exe"),
+                Path.Combine(GoLoginBrowserDir, string.Format("orbita-browser-{0}", verKey), "chrome.exe")
+            };
+
+            foreach (var p in possibleExePaths)
+            {
+                if (File.Exists(p)) return p;
             }
 
             // Nếu chưa có, kiểm tra xem có file zip trong Gologin/All-Browsers không
@@ -190,33 +202,54 @@ namespace ADBLogin.Core.Services
             {
                 try
                 {
-                    if (!Directory.Exists(GoLoginBrowserDir))
+                    string targetExtractDir = Path.Combine(AppBaseDir, "Gologin");
+                    if (!Directory.Exists(targetExtractDir))
                     {
-                        Directory.CreateDirectory(GoLoginBrowserDir);
+                        Directory.CreateDirectory(targetExtractDir);
                     }
+                    ZipFile.ExtractToDirectory(zipFile, targetExtractDir);
 
-                    // Tự động giải nén gói trình duyệt vào thư mục .gologin/browser/
-                    ZipFile.ExtractToDirectory(zipFile, GoLoginBrowserDir);
-
-                    if (File.Exists(targetExe))
-                    {
-                        return targetExe;
-                    }
+                    string extractedExe = Path.Combine(targetExtractDir, string.Format("orbita-browser-{0}", verKey), "chrome.exe");
+                    if (File.Exists(extractedExe)) return extractedExe;
                 }
-                catch { }
+                catch
+                {
+                    // Fallback giải nén vào GoLoginBrowserDir nếu thư mục local bị hạn chế quyền ghi
+                    try
+                    {
+                        if (!Directory.Exists(GoLoginBrowserDir)) Directory.CreateDirectory(GoLoginBrowserDir);
+                        ZipFile.ExtractToDirectory(zipFile, GoLoginBrowserDir);
+                        string userExe = Path.Combine(GoLoginBrowserDir, string.Format("orbita-browser-{0}", verKey), "chrome.exe");
+                        if (File.Exists(userExe)) return userExe;
+                    }
+                    catch { }
+                }
             }
 
             // 3. Fallback: Nếu phiên bản chỉ định không có, tìm phiên bản Orbita bất kỳ có sẵn
-            string fallback144 = Path.Combine(GoLoginBrowserDir, "orbita-browser-144", "chrome.exe");
-            if (File.Exists(fallback144)) return fallback144;
-
-            string fallback142 = Path.Combine(GoLoginBrowserDir, "orbita-browser-142", "chrome.exe");
-            if (File.Exists(fallback142)) return fallback142;
-
-            if (Directory.Exists(GoLoginBrowserDir))
+            string[] fallbackPaths = new string[]
             {
-                var anyExes = Directory.GetFiles(GoLoginBrowserDir, "chrome.exe", SearchOption.AllDirectories);
-                if (anyExes.Length > 0) return anyExes[0];
+                Path.Combine(AppBaseDir, "Gologin", "orbita-browser-144", "chrome.exe"),
+                Path.Combine(GoLoginBrowserDir, "orbita-browser-144", "chrome.exe"),
+                Path.Combine(AppBaseDir, "Gologin", "orbita-browser-143", "chrome.exe"),
+                Path.Combine(GoLoginBrowserDir, "orbita-browser-143", "chrome.exe"),
+                Path.Combine(GoLoginBrowserDir, "orbita-browser-142", "chrome.exe")
+            };
+
+            foreach (var fb in fallbackPaths)
+            {
+                if (File.Exists(fb)) return fb;
+            }
+
+            // Quét đệ quy tìm chrome.exe trong Gologin nội bộ và ~/.gologin/browser/
+            string[] searchDirs = new string[] { Path.Combine(AppBaseDir, "Gologin"), GoLoginBrowserDir };
+            foreach (var sDir in searchDirs)
+            {
+                if (Directory.Exists(sDir))
+                {
+                    var anyExes = Directory.GetFiles(sDir, "chrome.exe", SearchOption.AllDirectories);
+                    if (anyExes.Length > 0) return anyExes[0];
+                }
             }
 
             // Cuối cùng thử Google Chrome hệ thống

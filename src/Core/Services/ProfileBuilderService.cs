@@ -16,14 +16,33 @@ namespace ADBLogin.Core.Services
         /// </summary>
         public UserProfile CreateProfile(string baseFolder, string profileName, string proxy = "", string userAgent = "", string note = "", string browserVersion = "")
         {
+            string baseAppDir = AppDomain.CurrentDomain.BaseDirectory;
             if (string.IsNullOrEmpty(baseFolder))
             {
-                baseFolder = @"D:\Profiles";
+                if (Directory.Exists(@"D:\") || Directory.Exists(@"D:\Profiles"))
+                {
+                    baseFolder = @"D:\Profiles";
+                }
+                else
+                {
+                    baseFolder = Path.Combine(baseAppDir, "Files", "Profiles");
+                }
             }
 
-            if (!Directory.Exists(baseFolder))
+            try
             {
-                Directory.CreateDirectory(baseFolder);
+                if (!Directory.Exists(baseFolder))
+                {
+                    Directory.CreateDirectory(baseFolder);
+                }
+            }
+            catch
+            {
+                baseFolder = Path.Combine(baseAppDir, "Files", "Profiles");
+                if (!Directory.Exists(baseFolder))
+                {
+                    Directory.CreateDirectory(baseFolder);
+                }
             }
 
             string profileDir = Path.Combine(baseFolder, profileName);
@@ -31,8 +50,6 @@ namespace ADBLogin.Core.Services
             {
                 Directory.CreateDirectory(profileDir);
             }
-
-            string baseAppDir = AppDomain.CurrentDomain.BaseDirectory;
             string templateDir = Path.Combine(baseAppDir, "Files", "zero_profile");
 
             // 1. Sao chep cau truc thu muc zero_profile sang profile moi
