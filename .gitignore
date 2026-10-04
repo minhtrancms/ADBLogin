@@ -24,3 +24,8 @@ Files/Profiles/
 # Wireproxy WARP dynamic accounts & configs
 tools/wireproxy/warp_accounts/
 tools/wireproxy/warp_configs/
+
+# OpenVPN dynamic server configs
+tools/openvpn/nordvpn_configs/
+tools/openvpn/vpngate_configs/
+hma_config.json
