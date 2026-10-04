@@ -43,6 +43,7 @@ namespace ADBLogin.UI
         private TextBox _txtNordPass;
         private CheckBox _chkShowNordPass;
         private Button _btnSaveNord;
+        private ComboBox _cboNordCountry;
         private Button _btnDownloadNord;
         private Label _lblNordStatus;
         // VPN Gate
@@ -416,8 +417,25 @@ namespace ADBLogin.UI
                     MessageBox.Show("Đã lưu thông tin tài khoản NordVPN thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 };
 
-                _btnDownloadNord = CreateButton("🔄 Tải Lại Server", Color.FromArgb(219, 234, 254), Color.FromArgb(30, 64, 175), 110);
-                _btnDownloadNord.Location = new Point(550, 8);
+                Label lblCountry = new Label { Text = "Quốc gia:", Location = new Point(550, 12), AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold) };
+                _cboNordCountry = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Location = new Point(610, 8),
+                    Width = 145,
+                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+                };
+                _cboNordCountry.Items.Add("🇻🇳 Việt Nam");
+                _cboNordCountry.Items.Add("🌏 Toàn Cầu / Tối Ưu");
+                _cboNordCountry.Items.Add("🇸🇬 Singapore");
+                _cboNordCountry.Items.Add("🇯🇵 Nhật Bản");
+                _cboNordCountry.Items.Add("🇭🇰 Hồng Kông");
+                _cboNordCountry.Items.Add("🇺🇸 Hoa Kỳ");
+                _cboNordCountry.SelectedIndex = 0;
+                _cboNordCountry.SelectedIndexChanged += (s, e) => RebuildCurrentPorts();
+
+                _btnDownloadNord = CreateButton("🔄 Tải Server", Color.FromArgb(219, 234, 254), Color.FromArgb(30, 64, 175), 90);
+                _btnDownloadNord.Location = new Point(762, 8);
                 _btnDownloadNord.Height = 26;
                 _btnDownloadNord.Click += async (s, e) =>
                 {
@@ -426,7 +444,15 @@ namespace ADBLogin.UI
                     try
                     {
                         string nordDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "openvpn", "nordvpn_configs");
-                        await _openVpnService.DownloadNordVpnConfigsAsync(nordDir, 20);
+                        int cIdx = _cboNordCountry.SelectedIndex;
+                        int cid = 234;
+                        if (cIdx == 1) cid = 0;
+                        else if (cIdx == 2) cid = 195;
+                        else if (cIdx == 3) cid = 108;
+                        else if (cIdx == 4) cid = 97;
+                        else if (cIdx == 5) cid = 228;
+
+                        await _openVpnService.DownloadNordVpnConfigsAsync(nordDir, 20, cid);
                         LoadNordServers();
                         RebuildCurrentPorts();
                         MessageBox.Show("Đã cập nhật danh sách server NordVPN thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -434,14 +460,14 @@ namespace ADBLogin.UI
                     finally
                     {
                         _btnDownloadNord.Enabled = true;
-                        _btnDownloadNord.Text = "🔄 Tải Lại Server";
+                        _btnDownloadNord.Text = "🔄 Tải Server";
                     }
                 };
 
                 _lblNordStatus = new Label
                 {
-                    Text = string.Format("✅ {0} server NordVPN (VN, SG, JP, US, HK...) sẵn sàng", _nordServers.Count),
-                    Location = new Point(668, 12),
+                    Text = string.Format("✅ {0} server NordVPN sẵn sàng", _nordServers.Count),
+                    Location = new Point(860, 12),
                     AutoSize = true,
                     ForeColor = Color.FromArgb(16, 185, 129),
                     Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
@@ -453,6 +479,8 @@ namespace ADBLogin.UI
                 _pnlProviderSettings.Controls.Add(_txtNordPass);
                 _pnlProviderSettings.Controls.Add(_chkShowNordPass);
                 _pnlProviderSettings.Controls.Add(_btnSaveNord);
+                _pnlProviderSettings.Controls.Add(lblCountry);
+                _pnlProviderSettings.Controls.Add(_cboNordCountry);
                 _pnlProviderSettings.Controls.Add(_btnDownloadNord);
                 _pnlProviderSettings.Controls.Add(_lblNordStatus);
             }
@@ -548,6 +576,38 @@ namespace ADBLogin.UI
             }
         }
 
+        private List<string> GetFilteredNordServers()
+        {
+            int cIdx = _cboNordCountry != null ? _cboNordCountry.SelectedIndex : 0;
+            List<string> list = null;
+            if (cIdx == 0) // Việt Nam
+            {
+                list = _nordServers.Where(s => s.Key.IndexOf("vn", StringComparison.OrdinalIgnoreCase) >= 0).Select(s => s.Key).ToList();
+            }
+            else if (cIdx == 2) // Singapore
+            {
+                list = _nordServers.Where(s => s.Key.IndexOf("sg", StringComparison.OrdinalIgnoreCase) >= 0).Select(s => s.Key).ToList();
+            }
+            else if (cIdx == 3) // Nhật Bản
+            {
+                list = _nordServers.Where(s => s.Key.IndexOf("jp", StringComparison.OrdinalIgnoreCase) >= 0).Select(s => s.Key).ToList();
+            }
+            else if (cIdx == 4) // Hồng Kông
+            {
+                list = _nordServers.Where(s => s.Key.IndexOf("hk", StringComparison.OrdinalIgnoreCase) >= 0).Select(s => s.Key).ToList();
+            }
+            else if (cIdx == 5) // Hoa Kỳ
+            {
+                list = _nordServers.Where(s => s.Key.IndexOf("us", StringComparison.OrdinalIgnoreCase) >= 0).Select(s => s.Key).ToList();
+            }
+
+            if (list == null || list.Count == 0)
+            {
+                list = _nordServers.Select(s => s.Key).ToList();
+            }
+            return list;
+        }
+
         private void LoadVpnGateServers()
         {
             string vpnGateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "openvpn", "vpngate_configs");
@@ -597,7 +657,7 @@ namespace ADBLogin.UI
             else // OpenVPN based (NordVPN, VPN Gate, Custom)
             {
                 List<string> ovpnList = new List<string>();
-                if (provider == 1) ovpnList = _nordServers.Select(s => s.Key).ToList();
+                if (provider == 1) ovpnList = GetFilteredNordServers();
                 else if (provider == 2) ovpnList = _vpnGateServers.Select(s => s.Key).ToList();
                 else ovpnList = _customServers.Select(s => s.Key).ToList();
 
@@ -689,7 +749,7 @@ namespace ADBLogin.UI
                     _openVpnService.Config.OvpnDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "openvpn", "nordvpn_configs");
                     _openVpnService.SaveConfig();
 
-                    _openVpnService.InitializePorts(start, count, _nordServers.Select(s => s.Key).ToList());
+                    _openVpnService.InitializePorts(start, count, GetFilteredNordServers());
                     RefreshGridFromItems(_openVpnService.PortItems, "NordVPN");
                     await _openVpnService.StartAllAsync();
                 }

@@ -251,7 +251,7 @@ namespace ADBLogin.Core.Services
         /// <summary>
         /// Tự động tải danh sách file cấu hình OpenVPN của NordVPN từ NordCDN
         /// </summary>
-        public async Task<int> DownloadNordVpnConfigsAsync(string targetDir, int limit = 20)
+        public async Task<int> DownloadNordVpnConfigsAsync(string targetDir, int limit = 20, int countryId = 234)
         {
             if (string.IsNullOrEmpty(targetDir)) return 0;
             if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
@@ -266,7 +266,9 @@ namespace ADBLogin.Core.Services
                 using (var client = new WebClient())
                 {
                     client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
-                    string apiUrl = string.Format("https://api.nordvpn.com/v1/servers/recommendations?limit={0}", limit);
+                    string apiUrl = countryId > 0
+                        ? string.Format("https://api.nordvpn.com/v1/servers/recommendations?filters[country_id]={0}&limit={1}", countryId, limit)
+                        : string.Format("https://api.nordvpn.com/v1/servers/recommendations?limit={0}", limit);
                     string json = await client.DownloadStringTaskAsync(apiUrl);
                     var arr = JArray.Parse(json);
 
