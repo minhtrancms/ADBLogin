@@ -425,6 +425,20 @@ namespace ADBLogin.Core.Services
                 item.StatusText = "Bridge HTTP Sẵn Sàng";
             }
 
+            // Nếu dùng OpenVPN nhưng chưa nhận được IP adapter
+            if (!isNordVpn && !string.IsNullOrEmpty(item.OvpnPath) && string.IsNullOrEmpty(detectedTunnelIp))
+            {
+                item.Status = HmaTunnelStatus.Error;
+                item.StatusText = "VPN chưa cấp IP";
+                if (string.IsNullOrEmpty(item.LastError))
+                {
+                    item.LastError = "Không thể kết nối tới server OpenVPN hoặc card mạng TAP đang bận.";
+                }
+                NotifyStatusChanged(item);
+                Log(string.Format("❌ Cổng {0}: OpenVPN chưa kết nối được tới {1} ({2})", port, item.ServerName, item.LastError));
+                return false;
+            }
+
             // Khởi động Local HTTP Proxy Server trên 127.0.0.1:port
             try
             {
@@ -462,7 +476,14 @@ namespace ADBLogin.Core.Services
         {
             EnsureDirectory();
             string authFile = Path.Combine(TempDir, string.Format("auth_{0}.txt", item.Port));
-            File.WriteAllText(authFile, string.Format("{0}\r\n{1}\r\n", Config.Username, Config.Password));
+            string user = Config.Username;
+            string pass = Config.Password;
+            if (!string.IsNullOrEmpty(item.OvpnPath) && item.OvpnPath.IndexOf("vpngate", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                user = "vpn";
+                pass = "vpn";
+            }
+            File.WriteAllText(authFile, string.Format("{0}\r\n{1}\r\n", user ?? "vpn", pass ?? "vpn"));
 
             string runtimeOvpn = Path.Combine(TempDir, string.Format("tunnel_{0}.ovpn", item.Port));
             var originalLines = File.ReadAllLines(item.OvpnPath);
@@ -481,7 +502,6 @@ namespace ADBLogin.Core.Services
 
             // Thêm các cờ cách ly mạng: KHÔNG ảnh hưởng mạng chính máy tính
             newLines.Add("route-nopull");
-            newLines.Add("windows-driver wintun");
             newLines.Add(string.Format("auth-user-pass \"{0}\"", authFile.Replace("\\", "\\\\")));
             newLines.Add("auth-retry nointeract");
             newLines.Add("verb 3");

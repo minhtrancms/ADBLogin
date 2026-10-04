@@ -268,6 +268,59 @@ namespace ADBLogin.UI
             };
             _gridPorts.Columns.Add(btnRotateCol);
 
+            var btnAssignRowCol = new DataGridViewButtonColumn
+            {
+                Name = "clAssignRow",
+                HeaderText = "Gán Profile",
+                Text = "⚡ Gán",
+                UseColumnTextForButtonValue = true,
+                Width = 80
+            };
+            _gridPorts.Columns.Add(btnAssignRowCol);
+
+            // Context Menu & Selection
+            var mnuContext = new ContextMenuStrip();
+            var mnuAssign = new ToolStripMenuItem("⚡ Gán cổng này cho Profile...");
+            mnuAssign.Click += (s, e) =>
+            {
+                if (_gridPorts.CurrentRow != null)
+                {
+                    var itm = _gridPorts.CurrentRow.Tag as HmaProxyPortItem;
+                    if (itm != null) ShowAssignDialog(itm.Port);
+                }
+            };
+            var mnuCopyProxy = new ToolStripMenuItem("📋 Copy Proxy (127.0.0.1:Port)");
+            mnuCopyProxy.Click += (s, e) =>
+            {
+                if (_gridPorts.CurrentRow != null)
+                {
+                    var itm = _gridPorts.CurrentRow.Tag as HmaProxyPortItem;
+                    if (itm != null)
+                    {
+                        string pxy = string.Format("127.0.0.1:{0}", itm.Port);
+                        Clipboard.SetText(pxy);
+                        MessageBox.Show("Đã copy: " + pxy, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            };
+            mnuContext.Items.Add(mnuAssign);
+            mnuContext.Items.Add(mnuCopyProxy);
+            _gridPorts.ContextMenuStrip = mnuContext;
+
+            _gridPorts.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Right)
+                {
+                    var hti = _gridPorts.HitTest(e.X, e.Y);
+                    if (hti.RowIndex >= 0)
+                    {
+                        _gridPorts.ClearSelection();
+                        _gridPorts.Rows[hti.RowIndex].Selected = true;
+                        _gridPorts.CurrentCell = _gridPorts.Rows[hti.RowIndex].Cells[hti.ColumnIndex >= 0 ? hti.ColumnIndex : 0];
+                    }
+                }
+            };
+
             _gridPorts.CellContentClick += GridPorts_CellContentClick;
             _gridPorts.CellPainting += Grid_CellPainting;
 
@@ -709,24 +762,39 @@ namespace ADBLogin.UI
                     await _openVpnService.StartPortAsync(item.Port);
                 }
             }
+            else if (_gridPorts.Columns.Contains("clAssignRow") && e.ColumnIndex == _gridPorts.Columns["clAssignRow"].Index)
+            {
+                ShowAssignDialog(item.Port);
+            }
         }
         #endregion
 
         #region ASSIGN & EVENTS
-        private void ShowAssignDialog()
+        private void ShowAssignDialog(int? preSelectedPort = null)
         {
+            if (!preSelectedPort.HasValue && _gridPorts.CurrentRow != null)
+            {
+                var currentItem = _gridPorts.CurrentRow.Tag as HmaProxyPortItem;
+                if (currentItem != null)
+                {
+                    preSelectedPort = currentItem.Port;
+                }
+            }
+
             int provider = _cboProvider.SelectedIndex;
-            ShowGenericAssignDialog(selectedProfiles =>
+            var portItems = provider == 0 ? _warpService.PortItems : _openVpnService.PortItems;
+
+            ShowGenericAssignDialog(portItems, preSelectedPort, (selectedProfiles, targetPorts) =>
             {
                 if (provider == 0)
                 {
-                    _warpService.AssignProxiesToProfiles(selectedProfiles);
+                    _warpService.AssignProxiesToProfiles(selectedProfiles, targetPorts);
                     RefreshGridFromItems(_warpService.PortItems, "Cloudflare WARP");
                 }
                 else
                 {
                     string provName = provider == 1 ? "NordVPN" : (provider == 2 ? "VPN Gate" : "OpenVPN");
-                    _openVpnService.AssignProxiesToProfiles(selectedProfiles);
+                    _openVpnService.AssignProxiesToProfiles(selectedProfiles, targetPorts);
                     RefreshGridFromItems(_openVpnService.PortItems, provName);
                 }
             });
@@ -907,12 +975,29 @@ namespace ADBLogin.UI
             }
         }
 
-        private void ShowGenericAssignDialog(Action<List<UserProfile>> onConfirm)
+        private class ProxyPortChoice
+        {
+            public int? Port { get; set; }
+            public string DisplayText { get; set; }
+            public override string ToString() { return DisplayText; }
+        }
+
+        private class ProfileListItem
+        {
+            public UserProfile Profile { get; set; }
+            public override string ToString()
+            {
+                string curr = string.IsNullOrEmpty(Profile.Proxy) ? "Trực tiếp (Không Proxy)" : Profile.Proxy;
+                return string.Format("{0}   —   [Đang dùng: {1}]", Profile.ProfileName, curr);
+            }
+        }
+
+        private void ShowGenericAssignDialog(List<HmaProxyPortItem> portItems, int? preSelectedPort, Action<List<UserProfile>, List<int>> onConfirm)
         {
             var dialog = new Form
             {
-                Text = "⚡ GÁN DẢI PROXY VÀO PROFILES",
-                Size = new Size(540, 480),
+                Text = "⚡ GÁN CỔNG PROXY VÀO BROWSER PROFILES",
+                Size = new Size(600, 560),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -920,25 +1005,97 @@ namespace ADBLogin.UI
                 BackColor = Color.FromArgb(248, 250, 252)
             };
 
-            var lblPrompt = new Label
+            var lblStep1 = new Label
             {
-                Text = "Chọn danh sách profile bạn muốn tự động gán dải cổng Proxy:",
+                Text = "1. Chọn cổng Proxy đích cần gán:",
                 Location = new Point(16, 12),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42)
             };
 
-            var chkSelectAll = new CheckBox
+            var cboTargetPort = new ComboBox
             {
-                Text = "Chọn tất cả",
                 Location = new Point(16, 36),
-                AutoSize = true
+                Size = new Size(550, 26),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            cboTargetPort.Items.Add(new ProxyPortChoice
+            {
+                Port = null,
+                DisplayText = "🎯 Phân bổ đều cho tất cả các cổng (Tự động chia đều)"
+            });
+
+            int selectedIndex = 0;
+            if (portItems != null)
+            {
+                for (int i = 0; i < portItems.Count; i++)
+                {
+                    var pItem = portItems[i];
+                    string status = pItem.Status == HmaTunnelStatus.Connected ? "🟢 LIVE" : "⚪ " + pItem.Status;
+                    string ip = string.IsNullOrEmpty(pItem.PublicIp) || pItem.PublicIp == "Chưa nhận IP" ? "Chưa có IP" : pItem.PublicIp;
+                    string text = string.Format("Cổng {0} (127.0.0.1:{0}) | {1} | IP: {2} | {3}", pItem.Port, status, ip, pItem.ServerName ?? "");
+
+                    cboTargetPort.Items.Add(new ProxyPortChoice
+                    {
+                        Port = pItem.Port,
+                        DisplayText = text
+                    });
+
+                    if (preSelectedPort.HasValue && pItem.Port == preSelectedPort.Value)
+                    {
+                        selectedIndex = cboTargetPort.Items.Count - 1;
+                    }
+                }
+            }
+
+            cboTargetPort.SelectedIndex = selectedIndex;
+
+            var lblStep2 = new Label
+            {
+                Text = "2. Chọn danh sách Profile để gán proxy:",
+                Location = new Point(16, 76),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 23, 42)
+            };
+
+            var btnSelectAll = new Button
+            {
+                Text = "✅ Chọn tất cả",
+                Location = new Point(16, 102),
+                Size = new Size(95, 26),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8F),
+                BackColor = Color.FromArgb(226, 232, 240)
+            };
+            btnSelectAll.FlatAppearance.BorderSize = 0;
+
+            var btnDeselectAll = new Button
+            {
+                Text = "❌ Bỏ chọn hết",
+                Location = new Point(118, 102),
+                Size = new Size(95, 26),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8F),
+                BackColor = Color.FromArgb(226, 232, 240)
+            };
+            btnDeselectAll.FlatAppearance.BorderSize = 0;
+
+            var lblCount = new Label
+            {
+                Location = new Point(230, 106),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
+                ForeColor = Color.FromArgb(100, 116, 139)
             };
 
             var chkList = new CheckedListBox
             {
-                Location = new Point(16, 62),
-                Size = new Size(492, 310),
+                Location = new Point(16, 134),
+                Size = new Size(550, 316),
                 CheckOnClick = true,
                 Font = new Font("Segoe UI", 9F)
             };
@@ -946,42 +1103,82 @@ namespace ADBLogin.UI
             var profiles = AccountManager.Instance.GetAllProfiles();
             foreach (var p in profiles)
             {
-                chkList.Items.Add(p.ProfileName, true);
+                chkList.Items.Add(new ProfileListItem { Profile = p }, false);
             }
 
-            chkSelectAll.CheckedChanged += (s, e) =>
+            Action updateCounter = () =>
+            {
+                lblCount.Text = string.Format("Đã chọn: {0} / {1} profiles", chkList.CheckedItems.Count, profiles.Count);
+            };
+
+            btnSelectAll.Click += (s, e) =>
             {
                 for (int i = 0; i < chkList.Items.Count; i++)
-                {
-                    chkList.SetItemChecked(i, chkSelectAll.Checked);
-                }
+                    chkList.SetItemChecked(i, true);
+                updateCounter();
             };
-            chkSelectAll.Checked = true;
 
-            var btnOk = CreateButton("Xác Nhận Gán", Color.FromArgb(16, 185, 129), Color.White, 120);
-            btnOk.Location = new Point(268, 388);
+            btnDeselectAll.Click += (s, e) =>
+            {
+                for (int i = 0; i < chkList.Items.Count; i++)
+                    chkList.SetItemChecked(i, false);
+                updateCounter();
+            };
+
+            chkList.ItemCheck += (s, e) =>
+            {
+                this.BeginInvoke(new Action(updateCounter));
+            };
+
+            for (int i = 0; i < chkList.Items.Count; i++)
+                chkList.SetItemChecked(i, true);
+            updateCounter();
+
+            var btnOk = CreateButton("⚡ Xác Nhận Gán", Color.FromArgb(16, 185, 129), Color.White, 140);
+            btnOk.Location = new Point(306, 468);
             btnOk.Click += (s, e) =>
             {
-                var selectedNames = new HashSet<string>(chkList.CheckedItems.Cast<string>());
-                var selected = profiles.Where(p => selectedNames.Contains(p.ProfileName)).ToList();
+                var selected = new List<UserProfile>();
+                for (int i = 0; i < chkList.CheckedItems.Count; i++)
+                {
+                    var item = chkList.CheckedItems[i] as ProfileListItem;
+                    if (item != null)
+                        selected.Add(item.Profile);
+                }
 
                 if (selected.Count == 0)
                 {
-                    MessageBox.Show("Vui lòng chọn ít nhất 1 profile để gán proxy!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Vui lòng tích chọn ít nhất 1 profile để gán proxy!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                onConfirm(selected);
-                MessageBox.Show(string.Format("Đã gán proxy thành công cho {0} profile!", selected.Count), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var chosen = cboTargetPort.SelectedItem as ProxyPortChoice;
+                List<int> targetPorts = null;
+                if (chosen != null && chosen.Port.HasValue)
+                {
+                    targetPorts = new List<int> { chosen.Port.Value };
+                }
+
+                onConfirm(selected, targetPorts);
+
+                string msg = targetPorts != null
+                    ? string.Format("Đã gán thành công {0} profile vào Cổng {1}!", selected.Count, targetPorts[0])
+                    : string.Format("Đã phân bổ đều thành công {0} profile qua các cổng proxy!", selected.Count);
+
+                MessageBox.Show(msg, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 dialog.Close();
             };
 
             var btnCancel = CreateButton("Hủy", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 100);
-            btnCancel.Location = new Point(398, 388);
+            btnCancel.Location = new Point(466, 468);
             btnCancel.Click += (s, e) => dialog.Close();
 
-            dialog.Controls.Add(lblPrompt);
-            dialog.Controls.Add(chkSelectAll);
+            dialog.Controls.Add(lblStep1);
+            dialog.Controls.Add(cboTargetPort);
+            dialog.Controls.Add(lblStep2);
+            dialog.Controls.Add(btnSelectAll);
+            dialog.Controls.Add(btnDeselectAll);
+            dialog.Controls.Add(lblCount);
             dialog.Controls.Add(chkList);
             dialog.Controls.Add(btnOk);
             dialog.Controls.Add(btnCancel);
