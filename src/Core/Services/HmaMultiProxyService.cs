@@ -50,6 +50,92 @@ namespace ADBLogin.Core.Services
         private readonly Dictionary<int, Process> _runningProcesses = new Dictionary<int, Process>();
         private readonly Dictionary<int, LocalHttpProxyServer> _runningProxies = new Dictionary<int, LocalHttpProxyServer>();
         private readonly object _lock = new object();
+        private static readonly Dictionary<string, string> _dnsCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly object _dnsLock = new object();
+
+        public static async Task<string> ResolveHostFastAsync(string hostname)
+        {
+            if (string.IsNullOrEmpty(hostname)) return null;
+
+            IPAddress ip;
+            if (IPAddress.TryParse(hostname, out ip))
+            {
+                return hostname;
+            }
+
+            lock (_dnsLock)
+            {
+                if (_dnsCache.ContainsKey(hostname))
+                {
+                    return _dnsCache[hostname];
+                }
+            }
+
+            // 1. Thu phan giai DNS thong thuong
+            try
+            {
+                var dnsTask = Dns.GetHostAddressesAsync(hostname);
+                if (await Task.WhenAny(dnsTask, Task.Delay(1500)) == dnsTask)
+                {
+                    var addrs = dnsTask.Result;
+                    if (addrs != null && addrs.Length > 0)
+                    {
+                        string res = addrs[0].ToString();
+                        lock (_dnsLock) { _dnsCache[hostname] = res; }
+                        return res;
+                    }
+                }
+            }
+            catch { }
+
+            // 2. Fallback: Google DNS-over-HTTPS (Chong ISP chan / Query refused ten mien)
+            try
+            {
+                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | SecurityProtocolType.Tls;
+                var req = (HttpWebRequest)WebRequest.Create("https://dns.google/resolve?name=" + hostname);
+                req.Timeout = 3500;
+                req.ReadWriteTimeout = 3500;
+                using (var resp = (HttpWebResponse)await req.GetResponseAsync())
+                using (var s = resp.GetResponseStream())
+                using (var r = new StreamReader(s))
+                {
+                    string json = await r.ReadToEndAsync();
+                    var match = Regex.Match(json, @"""data""\s*:\s*""(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})""");
+                    if (match.Success)
+                    {
+                        string dohIp = match.Groups[1].Value;
+                        lock (_dnsLock) { _dnsCache[hostname] = dohIp; }
+                        return dohIp;
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Fallback: Cloudflare DNS-over-HTTPS
+            try
+            {
+                var req = (HttpWebRequest)WebRequest.Create("https://1.1.1.1/dns-query?name=" + hostname);
+                req.Headers.Add("Accept", "application/dns-json");
+                req.Timeout = 3500;
+                req.ReadWriteTimeout = 3500;
+                using (var resp = (HttpWebResponse)await req.GetResponseAsync())
+                using (var s = resp.GetResponseStream())
+                using (var r = new StreamReader(s))
+                {
+                    string json = await r.ReadToEndAsync();
+                    var match = Regex.Match(json, @"""data""\s*:\s*""(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})""");
+                    if (match.Success)
+                    {
+                        string dohIp = match.Groups[1].Value;
+                        lock (_dnsLock) { _dnsCache[hostname] = dohIp; }
+                        return dohIp;
+                    }
+                }
+            }
+            catch { }
+
+            return null;
+        }
 
         public event Action<HmaProxyPortItem> PortStatusChanged;
         public event Action<string> LogReceived;
@@ -383,6 +469,7 @@ namespace ADBLogin.Core.Services
                           || (!string.IsNullOrEmpty(item.ServerName) && item.ServerName.IndexOf("nordvpn", StringComparison.OrdinalIgnoreCase) >= 0);
 
             string upstreamHost = null;
+            string upstreamResolvedIp = null;
             int upstreamPort = 0;
             string upstreamUser = null;
             string upstreamPass = null;
@@ -403,7 +490,19 @@ namespace ADBLogin.Core.Services
                 upstreamPass = Config.Password;
                 upstreamSsl = true;
 
-                Log(string.Format("Cổng {0}: Cầu nối bảo mật trực tiếp NordVPN SSL Proxy ({1}:89)...", port, upstreamHost));
+                Log(string.Format("Cổng {0}: Đang kết nối phân giải IP máy chủ {1}...", port, upstreamHost));
+                upstreamResolvedIp = await ResolveHostFastAsync(upstreamHost);
+                if (string.IsNullOrEmpty(upstreamResolvedIp))
+                {
+                    item.Status = HmaTunnelStatus.Error;
+                    item.StatusText = "Không nhận IP máy chủ";
+                    item.LastError = string.Format("Máy chủ {0} không phản hồi DNS hoặc tạm thời gián đoạn.", upstreamHost);
+                    NotifyStatusChanged(item);
+                    Log(string.Format("❌ Cổng {0}: Máy chủ {1} không tìm thấy địa chỉ IP!", port, upstreamHost));
+                    return false;
+                }
+
+                Log(string.Format("Cổng {0}: Cầu nối bảo mật NordVPN SSL ({1} -> {2}:89)...", port, upstreamHost, upstreamResolvedIp));
                 item.StatusText = "Đang kết nối NordVPN...";
             }
             else if (hasOpenVpn && !string.IsNullOrEmpty(item.OvpnPath) && File.Exists(item.OvpnPath))
@@ -442,7 +541,7 @@ namespace ADBLogin.Core.Services
             // Khởi động Local HTTP Proxy Server trên 127.0.0.1:port
             try
             {
-                StartLocalProxyListener(item.Port, detectedTunnelIp, upstreamHost, upstreamPort, upstreamUser, upstreamPass, upstreamSsl, strictVpn: isNordVpn || !string.IsNullOrEmpty(item.OvpnPath));
+                StartLocalProxyListener(item.Port, detectedTunnelIp, upstreamHost, upstreamResolvedIp, upstreamPort, upstreamUser, upstreamPass, upstreamSsl, strictVpn: isNordVpn || !string.IsNullOrEmpty(item.OvpnPath));
                 item.LocalTunnelIp = detectedTunnelIp;
                 item.Status = HmaTunnelStatus.Connected;
                 item.StatusText = isNordVpn ? "Đang chạy (NordVPN SSL)" : (!string.IsNullOrEmpty(detectedTunnelIp) ? "Đang chạy (VPN)" : "Đang chạy (Local)");
@@ -576,7 +675,7 @@ namespace ADBLogin.Core.Services
             return detectedIp;
         }
 
-        private void StartLocalProxyListener(int port, string outboundBindingIp, string upstreamHost = null, int upstreamPort = 0, string upstreamUser = null, string upstreamPass = null, bool upstreamSsl = false, bool strictVpn = false)
+        private void StartLocalProxyListener(int port, string outboundBindingIp, string upstreamHost = null, string upstreamResolvedIp = null, int upstreamPort = 0, string upstreamUser = null, string upstreamPass = null, bool upstreamSsl = false, bool strictVpn = false)
         {
             lock (_lock)
             {
@@ -589,6 +688,7 @@ namespace ADBLogin.Core.Services
                 var server = new LocalHttpProxyServer(port, outboundBindingIp)
                 {
                     UpstreamHost = upstreamHost,
+                    UpstreamResolvedIp = upstreamResolvedIp,
                     UpstreamPort = upstreamPort,
                     UpstreamUser = upstreamUser,
                     UpstreamPass = upstreamPass,
@@ -687,6 +787,7 @@ namespace ADBLogin.Core.Services
             try
             {
                 ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)768 | SecurityProtocolType.Tls;
+                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | SecurityProtocolType.Tls;
                 ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, sslErr) => true;
 
                 var req = (HttpWebRequest)WebRequest.Create("https://api.ipify.org");
@@ -857,6 +958,7 @@ namespace ADBLogin.Core.Services
         public int Port { get; private set; }
         public string OutboundBindingIp { get; private set; }
         public string UpstreamHost { get; set; }
+        public string UpstreamResolvedIp { get; set; }
         public int UpstreamPort { get; set; }
         public string UpstreamUser { get; set; }
         public string UpstreamPass { get; set; }
@@ -924,24 +1026,131 @@ namespace ADBLogin.Core.Services
             {
                 try
                 {
-                    var ms = new MemoryStream();
                     byte[] tempBuf = new byte[4096];
-                    string headerStr = string.Empty;
-                    int endHeaderIdx = -1;
+                    int initialRead = await clientStream.ReadAsync(tempBuf, 0, tempBuf.Length, token);
+                    if (initialRead <= 0) return;
 
-                    // Đọc đầy đủ header HTTP (kết thúc bằng \r\n\r\n)
-                    while (true)
+                    // ==============================================================
+                    // 1. KIỂM TRA & XỬ LÝ SOCKS5 (Khi client kết nối bằng giao thức SOCKS5)
+                    // ==============================================================
+                    if (tempBuf[0] == 0x05)
+                    {
+                        // SOCKS5 greeting: Trả lời 0x05, 0x00 (No authentication)
+                        await clientStream.WriteAsync(new byte[] { 0x05, 0x00 }, 0, 2, token);
+
+                        // Đọc yêu cầu CONNECT từ client
+                        byte[] reqBuf = new byte[512];
+                        int reqRead = await clientStream.ReadAsync(reqBuf, 0, reqBuf.Length, token);
+                        if (reqRead < 7 || reqBuf[0] != 0x05 || reqBuf[1] != 0x01) return; // Chỉ hỗ trợ CONNECT
+
+                        string targetHost = null;
+                        int targetPort = 80;
+                        byte atyp = reqBuf[3];
+                        if (atyp == 0x01) // IPv4
+                        {
+                            targetHost = string.Format("{0}.{1}.{2}.{3}", reqBuf[4], reqBuf[5], reqBuf[6], reqBuf[7]);
+                            targetPort = (reqBuf[8] << 8) | reqBuf[9];
+                        }
+                        else if (atyp == 0x03) // Domain name
+                        {
+                            int dlen = reqBuf[4];
+                            targetHost = Encoding.ASCII.GetString(reqBuf, 5, dlen);
+                            targetPort = (reqBuf[5 + dlen] << 8) | reqBuf[6 + dlen];
+                        }
+                        else return;
+
+                        if (string.IsNullOrEmpty(targetHost)) return;
+
+                        // Chế độ Upstream NordVPN SSL Proxy
+                        if (!string.IsNullOrEmpty(UpstreamHost) && UpstreamPort > 0)
+                        {
+                            using (var upstreamClient = new TcpClient())
+                            {
+                                string connTarget = !string.IsNullOrEmpty(UpstreamResolvedIp) ? UpstreamResolvedIp : UpstreamHost;
+                                var connTask = upstreamClient.ConnectAsync(connTarget, UpstreamPort);
+                                if (await Task.WhenAny(connTask, Task.Delay(7000, token)) != connTask) return;
+
+                                Stream targetStream = upstreamClient.GetStream();
+                                SslStream sslStream = null;
+
+                                if (UpstreamSsl)
+                                {
+                                    sslStream = new SslStream(targetStream, false, (s, cert, chain, err) => true);
+                                    await sslStream.AuthenticateAsClientAsync(UpstreamHost, null, SslProtocols.Tls12, false);
+                                    targetStream = sslStream;
+                                }
+
+                                try
+                                {
+                                    string auth = !string.IsNullOrEmpty(UpstreamUser)
+                                        ? Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", UpstreamUser, UpstreamPass ?? string.Empty)))
+                                        : string.Empty;
+
+                                    string connectReq = string.Format("CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n", targetHost, targetPort, auth);
+                                    byte[] connectBytes = Encoding.ASCII.GetBytes(connectReq);
+                                    await targetStream.WriteAsync(connectBytes, 0, connectBytes.Length, token);
+
+                                    byte[] respBuf = new byte[4096];
+                                    int respRead = await targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
+                                    if (respRead <= 0) return;
+                                    string respStr = Encoding.ASCII.GetString(respBuf, 0, respRead);
+                                    if (!respStr.Contains("200")) return;
+
+                                    // Phản hồi SOCKS5 Success cho client: 05 00 00 01 00 00 00 00 00 00
+                                    byte[] socks5Ok = new byte[] { 0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0 };
+                                    await clientStream.WriteAsync(socks5Ok, 0, socks5Ok.Length, token);
+
+                                    var t1 = RelayStreamAsync(clientStream, targetStream, token);
+                                    var t2 = RelayStreamAsync(targetStream, clientStream, token);
+                                    await Task.WhenAny(t1, t2);
+                                }
+                                finally
+                                {
+                                    if (sslStream != null) sslStream.Dispose();
+                                }
+                            }
+                            return;
+                        }
+
+                        // Chế độ Outbound Socket trực tiếp / OpenVPN
+                        if (StrictVpnOnly && string.IsNullOrEmpty(OutboundBindingIp)) return;
+
+                        using (var targetSocket = CreateOutboundSocket())
+                        {
+                            var connTask = targetSocket.ConnectAsync(targetHost, targetPort);
+                            if (await Task.WhenAny(connTask, Task.Delay(7000, token)) != connTask) return;
+
+                            byte[] socks5Ok = new byte[] { 0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0 };
+                            await clientStream.WriteAsync(socks5Ok, 0, socks5Ok.Length, token);
+
+                            using (var targetStream = new NetworkStream(targetSocket))
+                            {
+                                var t1 = RelayStreamAsync(clientStream, targetStream, token);
+                                var t2 = RelayStreamAsync(targetStream, clientStream, token);
+                                await Task.WhenAny(t1, t2);
+                            }
+                        }
+                        return;
+                    }
+
+                    // ==============================================================
+                    // 2. XỬ LÝ HTTP / HTTPS CONNECT PROXY
+                    // ==============================================================
+                    var ms = new MemoryStream();
+                    ms.Write(tempBuf, 0, initialRead);
+                    string headerStr = Encoding.ASCII.GetString(ms.ToArray());
+                    int endHeaderIdx = headerStr.IndexOf("\r\n\r\n");
+
+                    while (endHeaderIdx < 0 && ms.Length <= 65536)
                     {
                         int read = await clientStream.ReadAsync(tempBuf, 0, tempBuf.Length, token);
                         if (read <= 0) break;
                         ms.Write(tempBuf, 0, read);
                         headerStr = Encoding.ASCII.GetString(ms.ToArray());
                         endHeaderIdx = headerStr.IndexOf("\r\n\r\n");
-                        if (endHeaderIdx >= 0) break;
-                        if (ms.Length > 65536) break;
                     }
 
-                    if (string.IsNullOrEmpty(headerStr)) return;
+                    if (string.IsNullOrEmpty(headerStr) || endHeaderIdx < 0) return;
 
                     string[] lines = headerStr.Split(new string[] { "\r\n" }, StringSplitOptions.None);
                     if (lines.Length == 0) return;
@@ -999,7 +1208,10 @@ namespace ADBLogin.Core.Services
 
                         using (var upstreamClient = new TcpClient())
                         {
-                            await upstreamClient.ConnectAsync(UpstreamHost, UpstreamPort);
+                            string connTarget = !string.IsNullOrEmpty(UpstreamResolvedIp) ? UpstreamResolvedIp : UpstreamHost;
+                            var connTask = upstreamClient.ConnectAsync(connTarget, UpstreamPort);
+                            if (await Task.WhenAny(connTask, Task.Delay(7000, token)) != connTask) return;
+
                             Stream targetStream = upstreamClient.GetStream();
                             SslStream sslStream = null;
 

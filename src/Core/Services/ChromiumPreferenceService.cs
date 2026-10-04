@@ -98,7 +98,15 @@ namespace ADBLogin.Core.Services
             {
                 proxyToken["mode"] = "fixed_servers";
                 string protocolPrefix = proxy.Protocol.ToString().ToLower();
-                proxyToken["server"] = string.Format("{0}://{1}:{2}", protocolPrefix, proxy.Host, proxy.Port);
+                if (proxy.Protocol == ProxyProtocol.Http || proxy.Protocol == ProxyProtocol.Https)
+                {
+                    // Chuẩn fixed_servers của Chromium: không tiền tố để áp dụng cho cả HTTP và HTTPS
+                    proxyToken["server"] = string.Format("{0}:{1}", proxy.Host, proxy.Port);
+                }
+                else
+                {
+                    proxyToken["server"] = string.Format("{0}://{1}:{2}", protocolPrefix, proxy.Host, proxy.Port);
+                }
             }
         }
 

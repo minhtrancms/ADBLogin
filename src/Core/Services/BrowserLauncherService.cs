@@ -83,7 +83,19 @@ namespace ADBLogin.Core.Services
             // Cau hinh Proxy qua CLI neu co
             if (proxy != null && proxy.IsEnabled)
             {
-                options.AddArgument(string.Format("--proxy-server={0}://{1}:{2}", proxy.Protocol.ToString().ToLower(), proxy.Host, proxy.Port));
+                if (proxy.Protocol == ProxyProtocol.Socks5)
+                {
+                    options.AddArgument(string.Format("--proxy-server=socks5://{0}:{1}", proxy.Host, proxy.Port));
+                }
+                else if (proxy.Protocol == ProxyProtocol.Socks4)
+                {
+                    options.AddArgument(string.Format("--proxy-server=socks4://{0}:{1}", proxy.Host, proxy.Port));
+                }
+                else
+                {
+                    // Cú pháp chuẩn Chromium để proxy toàn bộ cả HTTP lẫn HTTPS
+                    options.AddArgument(string.Format("--proxy-server={0}:{1}", proxy.Host, proxy.Port));
+                }
             }
 
             // ================= KỸ THUẬT SYSTEM SCALE FACTOR (CHUẨN PHONE FARM DÀI) =================
