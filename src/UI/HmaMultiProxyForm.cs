@@ -482,13 +482,13 @@ namespace ADBLogin.UI
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Italic)
             };
 
-            Button btnDownloadNord = CreateButton("⚡ Tự Động Tải 20 Server NordVPN", Color.FromArgb(219, 234, 254), Color.FromArgb(30, 64, 175), 343);
+            Button btnDownloadNord = CreateButton("⚡ Tải Server NordVPN", Color.FromArgb(219, 234, 254), Color.FromArgb(30, 64, 175), 168);
             btnDownloadNord.Location = new Point(14, 94);
             btnDownloadNord.Height = 28;
             btnDownloadNord.Click += async (s, e) =>
             {
                 btnDownloadNord.Enabled = false;
-                btnDownloadNord.Text = "⏳ Đang tải server NordVPN...";
+                btnDownloadNord.Text = "⏳ Đang tải...";
                 try
                 {
                     string nordDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "openvpn", "nordvpn_configs");
@@ -508,13 +508,50 @@ namespace ADBLogin.UI
                 finally
                 {
                     btnDownloadNord.Enabled = true;
-                    btnDownloadNord.Text = "⚡ Tự Động Tải 20 Server NordVPN";
+                    btnDownloadNord.Text = "⚡ Tải Server NordVPN";
+                }
+            };
+
+            Button btnDownloadVpnGate = CreateButton("🌐 Tải VPN Gate (Free)", Color.FromArgb(220, 252, 231), Color.FromArgb(22, 101, 52), 168);
+            btnDownloadVpnGate.Location = new Point(188, 94);
+            btnDownloadVpnGate.Height = 28;
+            btnDownloadVpnGate.Click += async (s, e) =>
+            {
+                btnDownloadVpnGate.Enabled = false;
+                btnDownloadVpnGate.Text = "⏳ Đang tải...";
+                try
+                {
+                    string vpnGateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "openvpn", "vpngate_configs");
+                    int downloaded = await _openVpnService.DownloadVpnGateConfigsAsync(vpnGateDir, 20);
+                    _txtOvpnDir.Text = vpnGateDir;
+                    _openVpnService.Config.OvpnDirectory = vpnGateDir;
+
+                    // Tự động điền tài khoản VPN Gate mặc định: vpn / vpn
+                    _txtUsername.Text = "vpn";
+                    _txtPassword.Text = "vpn";
+                    _openVpnService.Config.Username = "vpn";
+                    _openVpnService.Config.Password = "vpn";
+                    _openVpnService.SaveConfig();
+
+                    _discoveredOvpn = _openVpnService.ScanOvpnFiles(vpnGateDir);
+                    if (_discoveredOvpn.Count > 0)
+                    {
+                        _lblOvpnCount.Text = string.Format("✅ Tìm thấy {0} file cấu hình server", _discoveredOvpn.Count);
+                        _lblOvpnCount.ForeColor = Color.FromArgb(16, 185, 129);
+                    }
+                    RebuildOvpnPorts();
+                    MessageBox.Show(string.Format("Đã tải thành công {0} file server VPN Gate miễn phí!\nUsername & Mật khẩu 'vpn/vpn' đã được tự động điền.", downloaded), "VPN Gate Ready", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                finally
+                {
+                    btnDownloadVpnGate.Enabled = true;
+                    btnDownloadVpnGate.Text = "🌐 Tải VPN Gate (Free)";
                 }
             };
 
             Label lblHintOvpn = new Label
             {
-                Text = "💡 Hỗ trợ đầy đủ .ovpn từ NordVPN, HMA, Surfshark, v.v.",
+                Text = "💡 Hỗ trợ đầy đủ .ovpn từ VPN Gate (Free), NordVPN, HMA, v.v.",
                 Location = new Point(14, 130),
                 Size = new Size(345, 20),
                 ForeColor = Color.FromArgb(100, 116, 139),
@@ -526,6 +563,7 @@ namespace ADBLogin.UI
             grpOvpn.Controls.Add(_btnBrowseOvpn);
             grpOvpn.Controls.Add(_lblOvpnCount);
             grpOvpn.Controls.Add(btnDownloadNord);
+            grpOvpn.Controls.Add(btnDownloadVpnGate);
             grpOvpn.Controls.Add(lblHintOvpn);
 
             // Group 3: Thiết lập dải cổng

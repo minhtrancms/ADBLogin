@@ -209,6 +209,55 @@ namespace ADBLogin.Core.Services
         }
 
         /// <summary>
+        /// Tự động tải danh sách file cấu hình OpenVPN miễn phí từ VPN Gate (GitHub API)
+        /// </summary>
+        public async Task<int> DownloadVpnGateConfigsAsync(string targetDir, int limit = 20)
+        {
+            if (string.IsNullOrEmpty(targetDir)) return 0;
+            if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
+
+            Log("🌐 Đang truy vấn danh sách server miễn phí từ VPN Gate (GitHub)...");
+            int downloaded = 0;
+            try
+            {
+                using (var client = new WebClient())
+                {
+                    client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
+                    string apiUrl = "https://api.github.com/repos/fdciabdul/Vpngate-Scraper-API/contents/configs";
+                    string json = await client.DownloadStringTaskAsync(apiUrl);
+                    var arr = JArray.Parse(json);
+
+                    foreach (var item in arr)
+                    {
+                        if (downloaded >= limit) break;
+                        string name = (string)item["name"];
+                        string downloadUrl = (string)item["download_url"];
+                        if (string.IsNullOrEmpty(name) || !name.EndsWith(".ovpn") || string.IsNullOrEmpty(downloadUrl)) continue;
+
+                        string destFile = Path.Combine(targetDir, name);
+                        try
+                        {
+                            await client.DownloadFileTaskAsync(downloadUrl, destFile);
+                            downloaded++;
+                            Log(string.Format("✅ Đã tải server VPN Gate miễn phí: {0}", name));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(string.Format("Lỗi tải {0}: {1}", name, ex.Message));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Lỗi kết nối GitHub VPN Gate API: " + ex.Message);
+            }
+
+            Log(string.Format("🎉 Hoàn tất tải {0} file cấu hình server VPN Gate miễn phí vào: {1}", downloaded, targetDir));
+            return downloaded;
+        }
+
+        /// <summary>
         /// Quét tất cả file .ovpn trong thư mục do người dùng cung cấp
         /// </summary>
         public List<KeyValuePair<string, string>> ScanOvpnFiles(string folder)
