@@ -11,6 +11,7 @@ namespace ADBLogin.UI
         public UserProfile Profile { get; private set; }
 
         private TextBox _txtName;
+        private TextBox _txtTags;
         private TextBox _txtProxy;
         private TextBox _txtNote;
         private TextBox _txtUserAgent;
@@ -29,7 +30,7 @@ namespace ADBLogin.UI
         {
             bool isNew = Profile.ProfileId == "DEFAULT_ROOT" || string.IsNullOrEmpty(Profile.ProfileName);
             this.Text = isNew ? "Tạo Hồ Sơ Mới" : "Chỉnh Sửa - " + Profile.ProfileName;
-            this.Size = new Size(560, 520);
+            this.Size = new Size(580, 545);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -57,19 +58,55 @@ namespace ADBLogin.UI
             header.Controls.Add(lblTitle);
 
             // ================= INPUT FIELDS =================
-            int labelX = 30;
-            int inputX = 150;
-            int inputWidth = 350;
+            int labelX = 25;
+            int inputX = 145;
+            int inputWidth = 385;
 
             // 1. Tên Profile
-            Label lblName = new Label { Text = "Tên Profile:", Location = new Point(labelX, 85), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            _txtName = new TextBox { Location = new Point(inputX, 82), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
+            Label lblName = new Label { Text = "Tên Profile:", Location = new Point(labelX, 78), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _txtName = new TextBox { Location = new Point(inputX, 75), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
 
-            // 2. Trình duyệt / Lõi Chrome
-            Label lblBrowser = new Label { Text = "Lõi Trình duyệt:", Location = new Point(labelX, 125), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            // 2. Nhãn (Tags) & Nút gắn nhãn nhanh
+            Label lblTags = new Label { Text = "🏷️ Nhãn (Tags):", Location = new Point(labelX, 114), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _txtTags = new TextBox { Location = new Point(inputX, 111), Width = inputWidth, Font = new Font("Segoe UI", 9.5F) };
+
+            FlowLayoutPanel pnlQuickTags = new FlowLayoutPanel
+            {
+                Location = new Point(inputX, 140),
+                Width = inputWidth,
+                Height = 28,
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+                WrapContents = false,
+                AutoScroll = false
+            };
+
+            string[] quickTagList = new string[] { "Facebook", "Shopee", "TikTok", "Google", "Nuôi nick", "Cày Xu", "Airdrop", "Acc Chính" };
+            foreach (var qTag in quickTagList)
+            {
+                string tagValue = qTag;
+                Button btnTag = new Button
+                {
+                    Text = "+" + tagValue,
+                    AutoSize = true,
+                    Height = 24,
+                    BackColor = Color.FromArgb(241, 245, 249),
+                    ForeColor = Color.FromArgb(51, 65, 85),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 8F),
+                    Cursor = Cursors.Hand,
+                    Margin = new Padding(0, 0, 4, 0)
+                };
+                btnTag.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+                btnTag.Click += (s, e) => AddQuickTag(tagValue);
+                pnlQuickTags.Controls.Add(btnTag);
+            }
+
+            // 3. Trình duyệt / Lõi Chrome
+            Label lblBrowser = new Label { Text = "Lõi Trình duyệt:", Location = new Point(labelX, 178), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             _cboBrowserVersion = new ComboBox
             {
-                Location = new Point(inputX, 122),
+                Location = new Point(inputX, 175),
                 Width = inputWidth,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 9.5F)
@@ -83,37 +120,37 @@ namespace ADBLogin.UI
             _cboBrowserVersion.Items.Add("📁 Chọn file thực thi khác (.exe)...");
             _cboBrowserVersion.SelectedIndex = 0;
 
-            // 3. Proxy
-            Label lblProxy = new Label { Text = "Địa chỉ Proxy:", Location = new Point(labelX, 165), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            _txtProxy = new TextBox { Location = new Point(inputX, 162), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
+            // 4. Proxy
+            Label lblProxy = new Label { Text = "Địa chỉ Proxy:", Location = new Point(labelX, 218), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _txtProxy = new TextBox { Location = new Point(inputX, 215), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
             Label lblProxyHint = new Label 
             { 
                 Text = "Định dạng: IP:Port hoặc IP:Port:User:Pass (Để trống nếu dùng Direct)", 
-                Location = new Point(inputX, 190), 
+                Location = new Point(inputX, 243), 
                 AutoSize = true, 
                 ForeColor = Color.FromArgb(100, 116, 139), 
                 Font = new Font("Segoe UI", 8F) 
             };
 
-            // 4. User-Agent
-            Label lblUA = new Label { Text = "User-Agent:", Location = new Point(labelX, 215), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            _txtUserAgent = new TextBox { Location = new Point(inputX, 212), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
+            // 5. User-Agent
+            Label lblUA = new Label { Text = "User-Agent:", Location = new Point(labelX, 268), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            _txtUserAgent = new TextBox { Location = new Point(inputX, 265), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
             Label lblUAHint = new Label 
             { 
                 Text = "Để trống để hệ thống tự động gán User-Agent chuẩn", 
-                Location = new Point(inputX, 240), 
+                Location = new Point(inputX, 293), 
                 AutoSize = true, 
                 ForeColor = Color.FromArgb(100, 116, 139), 
                 Font = new Font("Segoe UI", 8F) 
             };
 
-            // 5. Ghi chú
-            Label lblNote = new Label { Text = "Ghi chú (Note):", Location = new Point(labelX, 265), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
+            // 6. Ghi chú
+            Label lblNote = new Label { Text = "Ghi chú (Note):", Location = new Point(labelX, 318), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
             _txtNote = new TextBox 
             { 
-                Location = new Point(inputX, 262), 
+                Location = new Point(inputX, 315), 
                 Width = inputWidth, 
-                Height = 85, 
+                Height = 70, 
                 Multiline = true, 
                 ScrollBars = ScrollBars.Vertical, 
                 Font = new Font("Segoe UI", 9.5F) 
@@ -123,8 +160,8 @@ namespace ADBLogin.UI
             _btnSave = new Button
             {
                 Text = "✔ Lưu Thay Đổi",
-                Size = new Size(140, 40),
-                Location = new Point(230, 395),
+                Size = new Size(140, 38),
+                Location = new Point(230, 435),
                 BackColor = Color.FromArgb(16, 185, 129),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -137,8 +174,8 @@ namespace ADBLogin.UI
             _btnCancel = new Button
             {
                 Text = "Hủy Bỏ",
-                Size = new Size(110, 40),
-                Location = new Point(385, 395),
+                Size = new Size(110, 38),
+                Location = new Point(385, 435),
                 BackColor = Color.FromArgb(241, 245, 249),
                 ForeColor = Color.FromArgb(71, 85, 105),
                 FlatStyle = FlatStyle.Flat,
@@ -151,6 +188,9 @@ namespace ADBLogin.UI
             this.Controls.Add(header);
             this.Controls.Add(lblName);
             this.Controls.Add(_txtName);
+            this.Controls.Add(lblTags);
+            this.Controls.Add(_txtTags);
+            this.Controls.Add(pnlQuickTags);
             this.Controls.Add(lblBrowser);
             this.Controls.Add(_cboBrowserVersion);
             this.Controls.Add(lblProxy);
@@ -165,9 +205,37 @@ namespace ADBLogin.UI
             this.Controls.Add(_btnCancel);
         }
 
+        private void AddQuickTag(string tag)
+        {
+            string current = (_txtTags.Text ?? "").Trim();
+            if (string.IsNullOrEmpty(current))
+            {
+                _txtTags.Text = tag;
+            }
+            else
+            {
+                string[] parts = current.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                bool exists = false;
+                foreach (var p in parts)
+                {
+                    if (p.Trim().Equals(tag, StringComparison.OrdinalIgnoreCase))
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists)
+                {
+                    _txtTags.Text = current + ", " + tag;
+                }
+            }
+            _txtTags.SelectionStart = _txtTags.Text.Length;
+        }
+
         private void LoadData()
         {
             _txtName.Text = Profile.ProfileName ?? "";
+            _txtTags.Text = Profile.Tags ?? "";
             _txtProxy.Text = Profile.Proxy ?? "";
             _txtUserAgent.Text = Profile.UserAgent ?? "";
             _txtNote.Text = Profile.Notes ?? "";
@@ -195,6 +263,7 @@ namespace ADBLogin.UI
             }
 
             Profile.ProfileName = _txtName.Text.Trim();
+            Profile.Tags = _txtTags.Text.Trim();
             Profile.Proxy = _txtProxy.Text.Trim();
             Profile.UserAgent = _txtUserAgent.Text.Trim();
             Profile.Notes = _txtNote.Text.Trim();

@@ -1375,99 +1375,116 @@ namespace ADBLogin.UI
 
             var fb = new FacebookAutomationService();
 
-            // 1. Dang nhap Cookie neu co
-            if (doLoginCookie)
+            try
             {
-                Log(string.Format("{0} Đang đăng nhập bằng Cookie...", tag));
-                fb.LoginWithCookie(driver, cookieStr, m => Log(tag + " " + m));
-            }
-            // Hoac dang nhap User/Pass/2FA
-            else if (doLoginCreds)
-            {
-                Log(string.Format("{0} Đang đăng nhập bằng User/Pass/2FA...", tag));
-                fb.LoginWithCredentials(driver, userStr, passStr, secretStr, m => Log(tag + " " + m));
-            }
+                BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Khởi tạo");
 
-            // 2. Kiem tra trang thai
-            string uid, status;
-            fb.CheckAccountStatus(driver, out uid, out status);
-            Log(string.Format("{0} Trạng thái hiện tại: {1} (UID: {2})", tag, status, uid));
-
-            // 3. Nuoi nick Newfeed
-            if (doSurf && !ct.IsCancellationRequested)
-            {
-                fb.SurfNewsfeed(driver, feedSec, doLike, maxLike, m => Log(tag + " " + m), ct);
-            }
-
-            // 4. Xem Reels
-            if (doReels && !ct.IsCancellationRequested)
-            {
-                fb.WatchReels(driver, reelCount, m => Log(tag + " " + m), ct);
-            }
-
-            // 5. Xem Thong bao
-            if (doNotif && !ct.IsCancellationRequested)
-            {
-                fb.ViewNotifications(driver, m => Log(tag + " " + m));
-            }
-
-            // 6. Tham gia nhom neu co
-            if (doJoin && !ct.IsCancellationRequested)
-            {
-                fb.JoinGroup(driver, groupUrl, m => Log(tag + " " + m));
-            }
-
-            // 7. Seeding binh luan neu co
-            if (!string.IsNullOrEmpty(postUrl) && !string.IsNullOrEmpty(commentSpintax) && !ct.IsCancellationRequested)
-            {
-                fb.CommentPost(driver, postUrl, commentSpintax, m => Log(tag + " " + m));
-            }
-
-            // 8. Dang bai viet len tuong hoac vao nhom
-            if (doPost && !ct.IsCancellationRequested)
-            {
-                string actualContent = postContent;
-                List<string> actualImages = new List<string>();
-
-                if (useApi && !string.IsNullOrWhiteSpace(apiUrl))
+                // 1. Dang nhap Cookie neu co
+                if (doLoginCookie)
                 {
-                    Log(string.Format("{0} Đang gọi API lấy nội dung & hình ảnh bài viết: {1}", tag, apiUrl));
-                    var apiRes = fb.FetchPostFromApi(apiUrl, m => Log(tag + " " + m));
-                    if (apiRes != null && apiRes.Success && !string.IsNullOrWhiteSpace(apiRes.Content))
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Đăng nhập Cookie");
+                    Log(string.Format("{0} Đang đăng nhập bằng Cookie...", tag));
+                    fb.LoginWithCookie(driver, cookieStr, m => Log(tag + " " + m));
+                }
+                // Hoac dang nhap User/Pass/2FA
+                else if (doLoginCreds)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Đăng nhập User/Pass");
+                    Log(string.Format("{0} Đang đăng nhập bằng User/Pass/2FA...", tag));
+                    fb.LoginWithCredentials(driver, userStr, passStr, secretStr, m => Log(tag + " " + m));
+                }
+
+                // 2. Kiem tra trang thai
+                string uid, status;
+                fb.CheckAccountStatus(driver, out uid, out status);
+                Log(string.Format("{0} Trạng thái hiện tại: {1} (UID: {2})", tag, status, uid));
+
+                // 3. Nuoi nick Newfeed
+                if (doSurf && !ct.IsCancellationRequested)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Lướt Newsfeed");
+                    fb.SurfNewsfeed(driver, feedSec, doLike, maxLike, m => Log(tag + " " + m), ct);
+                }
+
+                // 4. Xem Reels
+                if (doReels && !ct.IsCancellationRequested)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Xem Reels");
+                    fb.WatchReels(driver, reelCount, m => Log(tag + " " + m), ct);
+                }
+
+                // 5. Xem Thong bao
+                if (doNotif && !ct.IsCancellationRequested)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Đọc thông báo");
+                    fb.ViewNotifications(driver, m => Log(tag + " " + m));
+                }
+
+                // 6. Tham gia nhom neu co
+                if (doJoin && !ct.IsCancellationRequested)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Vào Group");
+                    fb.JoinGroup(driver, groupUrl, m => Log(tag + " " + m));
+                }
+
+                // 7. Seeding binh luan neu co
+                if (!string.IsNullOrEmpty(postUrl) && !string.IsNullOrEmpty(commentSpintax) && !ct.IsCancellationRequested)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Bình luận");
+                    fb.CommentPost(driver, postUrl, commentSpintax, m => Log(tag + " " + m));
+                }
+
+                // 8. Dang bai viet len tuong hoac vao nhom
+                if (doPost && !ct.IsCancellationRequested)
+                {
+                    BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Auto FB: Đăng bài viết");
+                    string actualContent = postContent;
+                    List<string> actualImages = new List<string>();
+
+                    if (useApi && !string.IsNullOrWhiteSpace(apiUrl))
                     {
-                        actualContent = apiRes.Content;
-                        if (attachApiImages && apiRes.DownloadedImagePaths != null && apiRes.DownloadedImagePaths.Count > 0)
+                        Log(string.Format("{0} Đang gọi API lấy nội dung & hình ảnh bài viết: {1}", tag, apiUrl));
+                        var apiRes = fb.FetchPostFromApi(apiUrl, m => Log(tag + " " + m));
+                        if (apiRes != null && apiRes.Success && !string.IsNullOrWhiteSpace(apiRes.Content))
                         {
-                            if (allImages)
+                            actualContent = apiRes.Content;
+                            if (attachApiImages && apiRes.DownloadedImagePaths != null && apiRes.DownloadedImagePaths.Count > 0)
                             {
-                                actualImages.AddRange(apiRes.DownloadedImagePaths);
-                            }
-                            else
-                            {
-                                actualImages.Add(apiRes.DownloadedImagePaths[0]);
+                                if (allImages)
+                                {
+                                    actualImages.AddRange(apiRes.DownloadedImagePaths);
+                                }
+                                else
+                                {
+                                    actualImages.Add(apiRes.DownloadedImagePaths[0]);
+                                }
                             }
                         }
+                        else if (apiFallback && !string.IsNullOrWhiteSpace(postContent))
+                        {
+                            Log(string.Format("{0} [!] Lấy bài từ API thất bại ({1}). Sử dụng nội dung thủ công dự phòng...", tag, apiRes != null ? apiRes.ErrorMessage : "Lỗi"));
+                            actualContent = postContent;
+                        }
+                        else
+                        {
+                            Log(string.Format("{0} [-] Bỏ qua đăng bài do không lấy được nội dung từ API!", tag));
+                            actualContent = null;
+                        }
                     }
-                    else if (apiFallback && !string.IsNullOrWhiteSpace(postContent))
+
+                    if (!string.IsNullOrEmpty(actualContent))
                     {
-                        Log(string.Format("{0} [!] Lấy bài từ API thất bại ({1}). Sử dụng nội dung thủ công dự phòng...", tag, apiRes != null ? apiRes.ErrorMessage : "Lỗi"));
-                        actualContent = postContent;
-                    }
-                    else
-                    {
-                        Log(string.Format("{0} [-] Bỏ qua đăng bài do không lấy được nội dung từ API!", tag));
-                        actualContent = null;
+                        Log(string.Format("{0} Đang tiến hành đăng bài viết kèm {1} hình ảnh từ API...", tag, actualImages.Count));
+                        fb.CreatePost(driver, actualContent, actualImages, postGroupUrl, m => Log(tag + " " + m));
                     }
                 }
 
-                if (!string.IsNullOrEmpty(actualContent))
-                {
-                    Log(string.Format("{0} Đang tiến hành đăng bài viết kèm {1} hình ảnh từ API...", tag, actualImages.Count));
-                    fb.CreatePost(driver, actualContent, actualImages, postGroupUrl, m => Log(tag + " " + m));
-                }
+                Log(string.Format("{0} Đã hoàn thành các tác vụ trên profile này!", tag));
             }
-
-            Log(string.Format("{0} Đã hoàn thành các tác vụ trên profile này!", tag));
+            finally
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(profile.ProfileId);
+            }
         }
 
         private void BtnStop_Click(object sender, EventArgs e)

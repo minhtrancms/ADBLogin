@@ -19,6 +19,8 @@ namespace ADBLogin.Core.Services
         private readonly ConcurrentDictionary<string, IWebDriver> _activeDrivers = new ConcurrentDictionary<string, IWebDriver>();
         // Luu tru Debugging Port (CDP) theo ProfileId
         private readonly ConcurrentDictionary<string, int> _activePorts = new ConcurrentDictionary<string, int>();
+        // Luu tru mo ta cong viec / tac vu dang chay theo ProfileId
+        private readonly ConcurrentDictionary<string, string> _activeTasks = new ConcurrentDictionary<string, string>();
 
         public static BrowserSessionManager Instance
         {
@@ -110,11 +112,51 @@ namespace ADBLogin.Core.Services
                     // Cua so da bi tat, xoa khoi danh sach
                     IWebDriver removed;
                     _activeDrivers.TryRemove(profileId, out removed);
+                    string removedTask;
+                    _activeTasks.TryRemove(profileId, out removedTask);
                     return false;
                 }
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Thiet lap ten tac vu / hanh dong ma profile dang chay (vi du: Auto FB, Cay Xu Shopee, Dong Bo Master)
+        /// </summary>
+        public void SetRunningTask(string profileId, string taskDescription)
+        {
+            if (string.IsNullOrEmpty(profileId)) return;
+            if (string.IsNullOrEmpty(taskDescription))
+            {
+                string removed;
+                _activeTasks.TryRemove(profileId, out removed);
+            }
+            else
+            {
+                _activeTasks[profileId] = taskDescription;
+            }
+        }
+
+        /// <summary>
+        /// Lay mo ta tac vu dang chay cua profile (tra ve null neu chi dang mo thong thuong)
+        /// </summary>
+        public string GetRunningTask(string profileId)
+        {
+            if (string.IsNullOrEmpty(profileId)) return null;
+            string task;
+            if (_activeTasks.TryGetValue(profileId, out task)) return task;
+            return null;
+        }
+
+        /// <summary>
+        /// Xoa trang thai tac vu dang chay cua profile
+        /// </summary>
+        public void ClearRunningTask(string profileId)
+        {
+            if (string.IsNullOrEmpty(profileId)) return;
+            string removed;
+            _activeTasks.TryRemove(profileId, out removed);
         }
 
         /// <summary>
@@ -127,6 +169,8 @@ namespace ADBLogin.Core.Services
             IWebDriver driver;
             int removedPort;
             _activePorts.TryRemove(profileId, out removedPort);
+            string removedTask;
+            _activeTasks.TryRemove(profileId, out removedTask);
 
             if (_activeDrivers.TryRemove(profileId, out driver))
             {

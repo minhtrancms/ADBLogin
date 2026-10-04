@@ -13,6 +13,7 @@ namespace ADBLogin.UI
         private ComboBox _cboFormat;
         private TextBox _txtPrefix;
         private NumericUpDown _numStartIndex;
+        private TextBox _txtBatchTags;
         private DataGridView _dgvPreview;
         private Button _btnParse;
         private Button _btnImport;
@@ -92,16 +93,21 @@ namespace ADBLogin.UI
             _cboFormat.SelectedIndex = 0;
 
             Panel pnlSettings = new Panel { Dock = DockStyle.Top, Height = 60, Padding = new Padding(0, 10, 0, 0) };
-            Label lblPrefix = new Label { Text = "Tiền tố tên Profile:", Location = new Point(0, 14), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
-            _txtPrefix = new TextBox { Text = "Profile_", Location = new Point(125, 12), Width = 140, Font = new Font("Segoe UI", 9F) };
+            Label lblPrefix = new Label { Text = "Tiền tố:", Location = new Point(0, 14), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            _txtPrefix = new TextBox { Text = "Profile_", Location = new Point(55, 12), Width = 95, Font = new Font("Segoe UI", 9F) };
 
-            Label lblStart = new Label { Text = "Bắt đầu từ số:", Location = new Point(280, 14), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
-            _numStartIndex = new NumericUpDown { Minimum = 1, Maximum = 999999, Value = 1, Location = new Point(375, 12), Width = 65 };
+            Label lblStart = new Label { Text = "Từ số:", Location = new Point(155, 14), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            _numStartIndex = new NumericUpDown { Minimum = 1, Maximum = 999999, Value = 1, Location = new Point(205, 12), Width = 55 };
+
+            Label lblTags = new Label { Text = "🏷️ Nhãn:", Location = new Point(268, 14), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            _txtBatchTags = new TextBox { Text = "Acc Clone", Location = new Point(335, 12), Width = 140, Font = new Font("Segoe UI", 9F) };
 
             pnlSettings.Controls.Add(lblPrefix);
             pnlSettings.Controls.Add(_txtPrefix);
             pnlSettings.Controls.Add(lblStart);
             pnlSettings.Controls.Add(_numStartIndex);
+            pnlSettings.Controls.Add(lblTags);
+            pnlSettings.Controls.Add(_txtBatchTags);
 
             Label lblPaste = new Label { Text = "2. Dán danh sách tài khoản (Mỗi tài khoản 1 dòng):", Dock = DockStyle.Top, Height = 24, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
             _txtInput = new TextBox
@@ -168,6 +174,7 @@ namespace ADBLogin.UI
             };
 
             _dgvPreview.Columns.Add("Name", "Tên Profile");
+            _dgvPreview.Columns.Add("Tags", "🏷️ Nhãn (Tags)");
             _dgvPreview.Columns.Add("User", "Tài khoản / UID");
             _dgvPreview.Columns.Add("Proxy", "Proxy");
             _dgvPreview.Columns.Add("Notes", "Ghi chú (Pass, 2FA, Email)");
@@ -297,8 +304,9 @@ namespace ADBLogin.UI
                     profile.Proxy = tr;
                 }
 
+                profile.Tags = _txtBatchTags != null ? _txtBatchTags.Text.Trim() : "";
                 _parsedProfiles.Add(profile);
-                _dgvPreview.Rows.Add(profile.ProfileName, profile.Username, profile.Proxy, profile.Notes);
+                _dgvPreview.Rows.Add(profile.ProfileName, profile.Tags, profile.Username, profile.Proxy, profile.Notes);
                 counter++;
             }
 

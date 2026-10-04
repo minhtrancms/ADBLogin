@@ -24,6 +24,7 @@ namespace ADBLogin.Core.Models
         public string BrowserPath { get; set; }
         public string BrowserVersion { get; set; }
         public string Notes { get; set; }
+        public string Tags { get; set; }
 
         public UserProfile()
         {
@@ -39,6 +40,7 @@ namespace ADBLogin.Core.Models
             BrowserPath = string.Empty;
             BrowserVersion = string.Empty;
             Notes = string.Empty;
+            Tags = string.Empty;
         }
 
         public bool IsValid()

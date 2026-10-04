@@ -679,6 +679,7 @@ namespace ADBLogin.UI
                             likeRate = (int)_numLikeRate.Value;
                             comments = _chkViewComments.Checked;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "TikTok: Lướt FYP Video");
                         _tikTokService.SurfFyp(driver, vCount, minW, maxW, likeRate, comments, logger);
                         break;
 
@@ -690,6 +691,7 @@ namespace ADBLogin.UI
                             followTarget = _txtFollowTarget.Text;
                             followDelay = (int)_numFollowDelay.Value;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "TikTok: Follow Creator");
                         _tikTokService.FollowUser(driver, followTarget, logger);
                         Thread.Sleep(followDelay * 1000);
                         break;
@@ -702,6 +704,7 @@ namespace ADBLogin.UI
                             vidUrl = _txtCommentVideoUrl.Text;
                             commentSpintax = _txtCommentSpintax.Text;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "TikTok: Comment Video");
                         _tikTokService.CommentVideo(driver, vidUrl, commentSpintax, logger);
                         break;
 
@@ -710,6 +713,7 @@ namespace ADBLogin.UI
                         this.Invoke(new Action(() => { cookieStr = _txtCookieInput.Text; }));
                         if (!string.IsNullOrWhiteSpace(cookieStr))
                         {
+                            BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "TikTok: Đăng nhập Cookie");
                             _tikTokService.LoginWithCookie(driver, cookieStr, logger);
                         }
                         break;
@@ -718,6 +722,10 @@ namespace ADBLogin.UI
             catch (Exception ex)
             {
                 Log(string.Format("[{0}] Lỗi: {1}", pName, ex.Message), Color.Red);
+            }
+            finally
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(profile.ProfileId);
             }
         }
 

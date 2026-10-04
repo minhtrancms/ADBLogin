@@ -95,6 +95,12 @@ namespace ADBLogin.Core.Services
             _syncCts = new CancellationTokenSource();
             var token = _syncCts.Token;
 
+            BrowserSessionManager.Instance.SetRunningTask(MasterProfileId, "Đồng bộ: 👑 Master");
+            foreach (var sid in SlaveProfileIds)
+            {
+                BrowserSessionManager.Instance.SetRunningTask(sid, "Đồng bộ: ⚡ Slave");
+            }
+
             if (OnSyncStateChanged != null) OnSyncStateChanged(true);
             Log(string.Format("[*] ĐÃ BẬT ĐỒNG BỘ THỜI GIAN THỰC! Master: {0} -> {1} Slaves", MasterProfileId, SlaveProfileIds.Count));
 
@@ -178,6 +184,19 @@ namespace ADBLogin.Core.Services
                 _syncCts = null;
             }
             IsRealtimeSyncing = false;
+
+            if (!string.IsNullOrEmpty(MasterProfileId))
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(MasterProfileId);
+            }
+            if (SlaveProfileIds != null)
+            {
+                foreach (var sid in SlaveProfileIds)
+                {
+                    BrowserSessionManager.Instance.ClearRunningTask(sid);
+                }
+            }
+
             if (OnSyncStateChanged != null) OnSyncStateChanged(false);
         }
 

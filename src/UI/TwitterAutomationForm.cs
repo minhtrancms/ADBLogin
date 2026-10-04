@@ -522,18 +522,21 @@ namespace ADBLogin.UI
                             likeR = (int)_numLikeRate.Value;
                             rtR = (int)_numRtRate.Value;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "X/Twitter: Lướt Feed");
                         _twitterService.SurfTimeline(driver, count, minR, maxR, likeR, rtR, logger);
                         break;
 
                     case 1: // Follow
                         string target = "";
                         this.Invoke(new Action(() => { target = _txtFollowTarget.Text; }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "X/Twitter: Follow User");
                         _twitterService.FollowUser(driver, target, logger);
                         break;
 
                     case 2: // Tweet
                         string content = "";
                         this.Invoke(new Action(() => { content = _txtTweetSpintax.Text; }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "X/Twitter: Đăng Tweet");
                         _twitterService.PostTweet(driver, content, logger);
                         break;
 
@@ -542,6 +545,7 @@ namespace ADBLogin.UI
                         this.Invoke(new Action(() => { cStr = _txtCookieInput.Text; }));
                         if (!string.IsNullOrEmpty(cStr))
                         {
+                            BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "X/Twitter: Đăng nhập Cookie");
                             _twitterService.LoginWithCookie(driver, cStr, logger);
                         }
                         break;
@@ -550,6 +554,10 @@ namespace ADBLogin.UI
             catch (Exception ex)
             {
                 Log(string.Format("[{0}] Lỗi: {1}", pName, ex.Message), Color.Red);
+            }
+            finally
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(profile.ProfileId);
             }
         }
 

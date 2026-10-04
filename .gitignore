@@ -3,6 +3,7 @@ bin/
 obj/
 *.log
 *.tmp
+temp_downloads/
 ADBLogin_Backup.exe
 
 # Large browser installer archives (over GitHub 100MB limit)

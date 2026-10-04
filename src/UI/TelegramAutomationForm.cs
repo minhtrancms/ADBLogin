@@ -438,10 +438,12 @@ namespace ADBLogin.UI
                     case 0: // Join Channel
                         string link = "";
                         this.Invoke(new Action(() => { link = _txtChannelLink.Text; }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Telegram: Vào Channel");
                         _teleService.JoinChannel(driver, link, logger);
                         break;
 
                     case 1: // React
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Telegram: Thả Cảm Xúc");
                         _teleService.ReactLatestMessage(driver, logger);
                         break;
                 }
@@ -449,6 +451,10 @@ namespace ADBLogin.UI
             catch (Exception ex)
             {
                 Log(string.Format("[{0}] Lỗi: {1}", pName, ex.Message), Color.Red);
+            }
+            finally
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(profile.ProfileId);
             }
         }
 

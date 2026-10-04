@@ -660,6 +660,7 @@ namespace ADBLogin.UI
                             domain = _txtTargetDomain.Text;
                             stay = (int)_numStaySeconds.Value;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Google: Seeding & Search");
                         _googleService.SearchAndSeedGoogle(driver, kwd, domain, stay, logger);
                         break;
 
@@ -675,12 +676,14 @@ namespace ADBLogin.UI
                             secret2fa = _txtTwoFactorSecret.Text;
                             recovery = _txtRecoveryEmail.Text;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Google: Đăng nhập Gmail");
                         _googleService.LoginGoogle(driver, email, pass, secret2fa, recovery, logger);
                         break;
 
                     case 2: // Read Gmail OTP
                         string senderFilter = "";
                         this.Invoke(new Action(() => { senderFilter = _txtSenderFilter.Text; }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Google: Lấy OTP Gmail");
                         string otp = _googleService.ReadGmailOtp(driver, senderFilter, logger);
                         if (!string.IsNullOrEmpty(otp))
                         {
@@ -698,6 +701,7 @@ namespace ADBLogin.UI
                             watchSec = (int)_numWatchSeconds.Value;
                             autoLike = _chkAutoLikeYoutube.Checked;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Google: Xem YouTube");
                         _googleService.WatchYouTube(driver, ytTarget, watchSec, autoLike, logger);
                         break;
                 }
@@ -705,6 +709,10 @@ namespace ADBLogin.UI
             catch (Exception ex)
             {
                 Log(string.Format("[{0}] Lỗi: {1}", pName, ex.Message), Color.Red);
+            }
+            finally
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(profile.ProfileId);
             }
         }
 

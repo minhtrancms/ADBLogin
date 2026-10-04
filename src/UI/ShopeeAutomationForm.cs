@@ -536,11 +536,13 @@ namespace ADBLogin.UI
                             maxW = (int)_numVideoMax.Value;
                         }));
 
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Shopee: Cày Xu & Video");
                         if (doCheckin) _shopeeService.CheckInCoins(driver, logger);
                         if (doVideo) _shopeeService.SurfShopeeVideo(driver, vCount, minW, maxW, logger);
                         break;
 
                     case 1: // Vouchers
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Shopee: Săn Voucher");
                         _shopeeService.CollectVouchers(driver, logger);
                         break;
 
@@ -556,6 +558,7 @@ namespace ADBLogin.UI
                             stay = (int)_numStaySeconds.Value;
                             addCart = _chkAddToCart.Checked;
                         }));
+                        BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Shopee: Seeding Sản Phẩm");
                         _shopeeService.SearchAndSeedProduct(driver, kwd, target, stay, addCart, logger);
                         break;
 
@@ -564,6 +567,7 @@ namespace ADBLogin.UI
                         this.Invoke(new Action(() => { cStr = _txtCookieInput.Text; }));
                         if (!string.IsNullOrEmpty(cStr))
                         {
+                            BrowserSessionManager.Instance.SetRunningTask(profile.ProfileId, "Shopee: Đăng nhập Cookie");
                             _shopeeService.LoginWithCookie(driver, cStr, logger);
                         }
                         break;
@@ -572,6 +576,10 @@ namespace ADBLogin.UI
             catch (Exception ex)
             {
                 Log(string.Format("[{0}] Lỗi: {1}", pName, ex.Message), Color.Red);
+            }
+            finally
+            {
+                BrowserSessionManager.Instance.ClearRunningTask(profile.ProfileId);
             }
         }
 

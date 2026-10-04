@@ -28,6 +28,7 @@ namespace ADBLogin.UI
         private Button _btnCheckAllProxy;
         private Button _btnAdd;
         private Button _btnEdit;
+        private Button _btnQuickTag;
         private Button _btnDelete;
         private Button _btnOpenFolder;
         private Button _btnCopyProxy;
@@ -204,6 +205,9 @@ namespace ADBLogin.UI
             _btnEdit = CreateCompactButton("✏️ Sửa", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 50, false, "Chỉnh sửa cấu hình profile đang chọn", Color.FromArgb(241, 245, 249));
             _btnEdit.Click += BtnEdit_Click;
 
+            _btnQuickTag = CreateCompactButton("🏷️ Tag", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Gắn nhãn (tags) nhanh cho các profile đang chọn", Color.FromArgb(241, 245, 249));
+            _btnQuickTag.Click += (s, e) => ShowQuickTagDialog();
+
             _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 50, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
             _btnDelete.Click += BtnDelete_Click;
 
@@ -279,6 +283,7 @@ namespace ADBLogin.UI
             pnlProfileBar.Controls.Add(_btnBatchImport);
             pnlProfileBar.Controls.Add(_btnAdd);
             pnlProfileBar.Controls.Add(_btnEdit);
+            pnlProfileBar.Controls.Add(_btnQuickTag);
             pnlProfileBar.Controls.Add(_btnDelete);
             pnlProfileBar.Controls.Add(_btnOpenFolder);
             pnlProfileBar.Controls.Add(CreateDivider());
@@ -533,18 +538,20 @@ namespace ADBLogin.UI
 
             _grid.Columns.Add("clId", "ID");
             _grid.Columns.Add("clName", "Tên Profile / Email");
-            _grid.Columns.Add("clRunningStatus", "Trạng Thái Mở");
+            _grid.Columns.Add("clTags", "🏷️ Nhãn (Tags)");
+            _grid.Columns.Add("clRunningStatus", "Trạng Thái & Tác Vụ");
             _grid.Columns.Add("clProxy", "Proxy");
             _grid.Columns.Add("clStatusProxy", "Trạng Thái Proxy");
             _grid.Columns.Add("clNote", "Ghi Chú");
             _grid.Columns.Add("clPath", "Thư Mục Dữ Liệu");
 
-            _grid.Columns["clId"].Width = 85;
-            _grid.Columns["clName"].Width = 200;
-            _grid.Columns["clRunningStatus"].Width = 120;
-            _grid.Columns["clProxy"].Width = 145;
-            _grid.Columns["clStatusProxy"].Width = 185;
-            _grid.Columns["clNote"].Width = 100;
+            _grid.Columns["clId"].Width = 80;
+            _grid.Columns["clName"].Width = 180;
+            _grid.Columns["clTags"].Width = 140;
+            _grid.Columns["clRunningStatus"].Width = 160;
+            _grid.Columns["clProxy"].Width = 135;
+            _grid.Columns["clStatusProxy"].Width = 160;
+            _grid.Columns["clNote"].Width = 95;
 
             _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) BtnLaunch_Click(null, null); };
             _grid.MouseDown += Grid_MouseDown;
@@ -681,16 +688,60 @@ namespace ADBLogin.UI
 
             string colName = _grid.Columns[e.ColumnIndex].Name;
 
-            if (colName == "clRunningStatus" && e.Value != null)
+            if (colName == "clTags")
+            {
+                e.PaintBackground(e.CellBounds, true);
+                string val = e.Value != null ? e.Value.ToString() : "";
+                DrawTagBadges(e.Graphics, e.CellBounds, val);
+                e.Handled = true;
+            }
+            else if (colName == "clRunningStatus" && e.Value != null)
             {
                 e.PaintBackground(e.CellBounds, true);
 
                 string val = e.Value.ToString();
-                bool isRunning = val.Contains("ĐANG MỞ");
+                bool isRunning = val.Contains("ĐANG MỞ") || val.StartsWith("▶") || val.Contains("Auto") || val.Contains("Đồng Bộ");
 
-                Color pillBg = isRunning ? Color.FromArgb(220, 252, 231) : Color.FromArgb(243, 244, 246);
-                Color pillBorder = isRunning ? Color.FromArgb(134, 239, 172) : Color.FromArgb(209, 213, 219);
-                Color textColor = isRunning ? Color.FromArgb(21, 128, 61) : Color.FromArgb(107, 114, 128);
+                Color pillBg = Color.FromArgb(243, 244, 246);
+                Color pillBorder = Color.FromArgb(209, 213, 219);
+                Color textColor = Color.FromArgb(107, 114, 128);
+
+                if (val.IndexOf("FB", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    pillBg = Color.FromArgb(239, 246, 255);
+                    pillBorder = Color.FromArgb(191, 219, 254);
+                    textColor = Color.FromArgb(29, 78, 216);
+                }
+                else if (val.IndexOf("Shopee", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    pillBg = Color.FromArgb(255, 247, 237);
+                    pillBorder = Color.FromArgb(254, 215, 170);
+                    textColor = Color.FromArgb(194, 65, 12);
+                }
+                else if (val.IndexOf("TikTok", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    pillBg = Color.FromArgb(241, 245, 249);
+                    pillBorder = Color.FromArgb(203, 213, 225);
+                    textColor = Color.FromArgb(15, 23, 42);
+                }
+                else if (val.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Gmail", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    pillBg = Color.FromArgb(254, 242, 242);
+                    pillBorder = Color.FromArgb(254, 202, 202);
+                    textColor = Color.FromArgb(185, 28, 28);
+                }
+                else if (val.IndexOf("Đồng Bộ", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Sync", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    pillBg = Color.FromArgb(238, 242, 255);
+                    pillBorder = Color.FromArgb(199, 210, 254);
+                    textColor = Color.FromArgb(67, 56, 202);
+                }
+                else if (isRunning)
+                {
+                    pillBg = Color.FromArgb(220, 252, 231);
+                    pillBorder = Color.FromArgb(134, 239, 172);
+                    textColor = Color.FromArgb(21, 128, 61);
+                }
 
                 DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
                 e.Handled = true;
@@ -725,6 +776,117 @@ namespace ADBLogin.UI
 
                 DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
                 e.Handled = true;
+            }
+        }
+
+        private void GetTagColors(string tag, out Color bg, out Color border, out Color text)
+        {
+            string t = (tag ?? "").ToLowerInvariant();
+            if (t.Contains("fb") || t.Contains("facebook"))
+            {
+                bg = Color.FromArgb(239, 246, 255);
+                border = Color.FromArgb(191, 219, 254);
+                text = Color.FromArgb(29, 78, 216);
+            }
+            else if (t.Contains("shopee"))
+            {
+                bg = Color.FromArgb(255, 247, 237);
+                border = Color.FromArgb(254, 215, 170);
+                text = Color.FromArgb(194, 65, 12);
+            }
+            else if (t.Contains("tiktok"))
+            {
+                bg = Color.FromArgb(241, 245, 249);
+                border = Color.FromArgb(203, 213, 225);
+                text = Color.FromArgb(15, 23, 42);
+            }
+            else if (t.Contains("google") || t.Contains("gmail"))
+            {
+                bg = Color.FromArgb(254, 242, 242);
+                border = Color.FromArgb(254, 202, 202);
+                text = Color.FromArgb(185, 28, 28);
+            }
+            else if (t.Contains("xu") || t.Contains("cày"))
+            {
+                bg = Color.FromArgb(254, 243, 199);
+                border = Color.FromArgb(253, 230, 138);
+                text = Color.FromArgb(180, 83, 9);
+            }
+            else if (t.Contains("chính") || t.Contains("main"))
+            {
+                bg = Color.FromArgb(236, 253, 245);
+                border = Color.FromArgb(167, 243, 208);
+                text = Color.FromArgb(4, 120, 87);
+            }
+            else if (t.Contains("airdrop") || t.Contains("twitter") || t.Contains("x"))
+            {
+                bg = Color.FromArgb(240, 249, 255);
+                border = Color.FromArgb(186, 230, 253);
+                text = Color.FromArgb(3, 105, 161);
+            }
+            else
+            {
+                bg = Color.FromArgb(243, 244, 246);
+                border = Color.FromArgb(229, 231, 235);
+                text = Color.FromArgb(75, 85, 99);
+            }
+        }
+
+        private void DrawTagBadges(Graphics g, Rectangle bounds, string tagsString)
+        {
+            if (string.IsNullOrWhiteSpace(tagsString)) return;
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            string[] tags = tagsString.Split(new char[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+            if (tags.Length == 0) return;
+
+            int curX = bounds.X + 6;
+            int curY = bounds.Y + 6;
+            int height = bounds.Height - 12;
+            int maxRight = bounds.Right - 4;
+
+            using (Font font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
+            {
+                for (int i = 0; i < tags.Length; i++)
+                {
+                    string tag = tags[i].Trim();
+                    if (string.IsNullOrEmpty(tag)) continue;
+
+                    Color bg, border, text;
+                    GetTagColors(tag, out bg, out border, out text);
+
+                    Size textSize = TextRenderer.MeasureText(tag, font);
+                    int badgeWidth = textSize.Width + 10;
+
+                    if (curX + badgeWidth > maxRight)
+                    {
+                        if (curX < maxRight - 18)
+                        {
+                            int remaining = tags.Length - i;
+                            string moreText = "+" + remaining;
+                            Rectangle moreRect = new Rectangle(curX, curY, maxRight - curX, height);
+                            using (GraphicsPath p = GetRoundedRectangle(moreRect, 4))
+                            {
+                                using (SolidBrush b = new SolidBrush(Color.FromArgb(241, 245, 249))) g.FillPath(b, p);
+                                using (Pen pen = new Pen(Color.FromArgb(203, 213, 225), 1f)) g.DrawPath(pen, p);
+                            }
+                            TextRenderer.DrawText(g, moreText, font, moreRect, Color.FromArgb(71, 85, 105),
+                                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                        }
+                        break;
+                    }
+
+                    Rectangle badgeRect = new Rectangle(curX, curY, badgeWidth, height);
+                    using (GraphicsPath path = GetRoundedRectangle(badgeRect, 4))
+                    {
+                        using (SolidBrush b = new SolidBrush(bg)) g.FillPath(b, path);
+                        using (Pen pen = new Pen(border, 1f)) g.DrawPath(pen, path);
+                    }
+                    TextRenderer.DrawText(g, tag, font, badgeRect, text,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+
+                    curX += badgeWidth + 4;
+                }
             }
         }
 
@@ -789,7 +951,15 @@ namespace ADBLogin.UI
                 if (isRunning)
                 {
                     runningCount++;
-                    _grid.Rows[i].Cells["clRunningStatus"].Value = "🟢 ĐANG MỞ";
+                    string activeTask = _sessionManager.GetRunningTask(id);
+                    if (!string.IsNullOrEmpty(activeTask))
+                    {
+                        _grid.Rows[i].Cells["clRunningStatus"].Value = "▶ " + activeTask;
+                    }
+                    else
+                    {
+                        _grid.Rows[i].Cells["clRunningStatus"].Value = "🟢 ĐANG MỞ";
+                    }
                 }
                 else
                 {
@@ -1116,6 +1286,11 @@ namespace ADBLogin.UI
             var itemEdit = _contextMenu.Items.Add("✏️ Sửa cấu hình");
             itemEdit.Click += BtnEdit_Click;
 
+            var itemQuickTag = _contextMenu.Items.Add("🏷️ Gắn Nhãn (Tags) nhanh...");
+            itemQuickTag.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemQuickTag.ForeColor = Color.FromArgb(139, 92, 246);
+            itemQuickTag.Click += (s, e) => ShowQuickTagDialog();
+
             var itemFolder = _contextMenu.Items.Add("📁 Mở thư mục ổ đĩa");
             itemFolder.Click += BtnOpenFolder_Click;
 
@@ -1129,6 +1304,167 @@ namespace ADBLogin.UI
             itemDelete.Click += BtnDelete_Click;
 
             _grid.ContextMenuStrip = _contextMenu;
+        }
+
+        private void ShowQuickTagDialog()
+        {
+            var selected = GetSelectedProfiles();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn ít nhất 1 profile để gắn nhãn!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (Form dlg = new Form())
+            {
+                dlg.Text = string.Format("Gắn Nhãn Cho {0} Profile Đã Chọn", selected.Count);
+                dlg.Size = new Size(500, 260);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = Color.FromArgb(248, 250, 252);
+                dlg.Font = new Font("Segoe UI", 9.5F);
+
+                Label lblPrompt = new Label
+                {
+                    Text = string.Format("Nhập nhãn muốn gán cho {0} profile đang chọn (phân cách bằng dấu phẩy):", selected.Count),
+                    Location = new Point(20, 15),
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(30, 41, 59)
+                };
+
+                TextBox txtInput = new TextBox
+                {
+                    Location = new Point(20, 42),
+                    Width = 445,
+                    Font = new Font("Segoe UI", 10F)
+                };
+                if (selected.Count == 1) txtInput.Text = selected[0].Tags ?? "";
+
+                FlowLayoutPanel pnlQuick = new FlowLayoutPanel
+                {
+                    Location = new Point(20, 75),
+                    Width = 445,
+                    Height = 30,
+                    WrapContents = false
+                };
+
+                string[] commonTags = new string[] { "Facebook", "Shopee", "TikTok", "Google", "Nuôi nick", "Cày Xu", "Airdrop", "Acc Chính" };
+                foreach (var qTag in commonTags)
+                {
+                    string t = qTag;
+                    Button btn = new Button
+                    {
+                        Text = "+" + t,
+                        AutoSize = true,
+                        Height = 24,
+                        BackColor = Color.FromArgb(241, 245, 249),
+                        ForeColor = Color.FromArgb(51, 65, 85),
+                        FlatStyle = FlatStyle.Flat,
+                        Font = new Font("Segoe UI", 8F),
+                        Cursor = Cursors.Hand,
+                        Margin = new Padding(0, 0, 4, 0)
+                    };
+                    btn.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+                    btn.Click += (s2, e2) =>
+                    {
+                        string cur = txtInput.Text.Trim();
+                        if (string.IsNullOrEmpty(cur)) txtInput.Text = t;
+                        else if (!cur.Contains(t)) txtInput.Text = cur + ", " + t;
+                        txtInput.SelectionStart = txtInput.Text.Length;
+                    };
+                    pnlQuick.Controls.Add(btn);
+                }
+
+                CheckBox chkAppend = new CheckBox
+                {
+                    Text = "Thêm vào nhãn hiện có (thay vì ghi đè hoàn toàn)",
+                    Location = new Point(20, 115),
+                    AutoSize = true,
+                    Checked = (selected.Count > 1),
+                    Font = new Font("Segoe UI", 9F),
+                    ForeColor = Color.FromArgb(71, 85, 105)
+                };
+
+                Button btnOk = new Button
+                {
+                    Text = "✔ Áp Dụng",
+                    DialogResult = DialogResult.OK,
+                    Size = new Size(115, 34),
+                    Location = new Point(235, 160),
+                    BackColor = Color.FromArgb(16, 185, 129),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnOk.FlatAppearance.BorderSize = 0;
+
+                Button btnCancel = new Button
+                {
+                    Text = "Hủy",
+                    DialogResult = DialogResult.Cancel,
+                    Size = new Size(95, 34),
+                    Location = new Point(365, 160),
+                    BackColor = Color.FromArgb(241, 245, 249),
+                    ForeColor = Color.FromArgb(71, 85, 105),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F),
+                    Cursor = Cursors.Hand
+                };
+                btnCancel.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+
+                dlg.Controls.Add(lblPrompt);
+                dlg.Controls.Add(txtInput);
+                dlg.Controls.Add(pnlQuick);
+                dlg.Controls.Add(chkAppend);
+                dlg.Controls.Add(btnOk);
+                dlg.Controls.Add(btnCancel);
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    string newTags = txtInput.Text.Trim();
+                    bool append = chkAppend.Checked;
+
+                    foreach (var prof in selected)
+                    {
+                        if (append)
+                        {
+                            string oldTags = prof.Tags ?? "";
+                            if (string.IsNullOrEmpty(oldTags))
+                            {
+                                prof.Tags = newTags;
+                            }
+                            else
+                            {
+                                var existing = new List<string>(oldTags.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries));
+                                var toAdd = newTags.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var item in toAdd)
+                                {
+                                    string itm = item.Trim();
+                                    if (!string.IsNullOrEmpty(itm) && !existing.Exists(e => e.Trim().Equals(itm, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        existing.Add(itm);
+                                    }
+                                }
+                                prof.Tags = string.Join(", ", existing.ToArray());
+                            }
+                        }
+                        else
+                        {
+                            prof.Tags = newTags;
+                        }
+                    }
+
+                    _accountManager.SaveProfiles();
+                    FilterData();
+                    _lblStatus.Text = string.Format("Đã cập nhật nhãn cho {0} profile thành công!", selected.Count);
+                }
+            }
         }
 
         private void LoadData()
@@ -1154,8 +1490,9 @@ namespace ADBLogin.UI
                     bool matchProxy = (p.Proxy ?? "").ToLower().Contains(keyword);
                     bool matchNote = (p.Notes ?? "").ToLower().Contains(keyword);
                     bool matchId = (p.ProfileId ?? "").ToLower().Contains(keyword);
+                    bool matchTag = (p.Tags ?? "").ToLower().Contains(keyword);
 
-                    if (!matchName && !matchProxy && !matchNote && !matchId)
+                    if (!matchName && !matchProxy && !matchNote && !matchId && !matchTag)
                     {
                         continue;
                     }
@@ -1166,11 +1503,19 @@ namespace ADBLogin.UI
 
                 string proxyStatus = string.IsNullOrEmpty(p.Proxy) ? "🟢 Direct" : "Chưa kiểm tra";
                 string displayPath = string.IsNullOrEmpty(p.BrowserPath) ? "Mặc định" : p.BrowserPath;
-                string runningStatus = _sessionManager.IsRunning(p.ProfileId) ? "🟢 ĐANG MỞ" : "⚪ ĐÃ TẮT";
+                string displayTags = string.IsNullOrEmpty(p.Tags) ? "" : p.Tags;
+
+                string runningStatus = "⚪ ĐÃ TẮT";
+                if (_sessionManager.IsRunning(p.ProfileId))
+                {
+                    string activeTask = _sessionManager.GetRunningTask(p.ProfileId);
+                    runningStatus = !string.IsNullOrEmpty(activeTask) ? ("▶ " + activeTask) : "🟢 ĐANG MỞ";
+                }
 
                 _grid.Rows.Add(
                     p.ProfileId,
                     p.ProfileName,
+                    displayTags,
                     runningStatus,
                     displayProxy,
                     proxyStatus,
