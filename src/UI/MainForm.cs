@@ -76,10 +76,11 @@ namespace ADBLogin.UI
         {
             this.Text = "ADBLogin v2.0 - Profile Manager [Enterprise Unlimited]";
             this.Size = new Size(1300, 700);
-            this.MinimumSize = new Size(980, 500);
+            this.MinimumSize = new Size(980, 520);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             this.BackColor = Color.FromArgb(243, 244, 246);
+            this.DoubleBuffered = true;
 
             // ================= 1. HEADER PANEL (GỌN GÀNG, CHUẨN WINDOWS 11) =================
             Panel headerPanel = new Panel
@@ -516,12 +517,23 @@ namespace ADBLogin.UI
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
+                AllowUserToResizeColumns = true,
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                RowTemplate = { Height = 34 } // Chiều cao hàng vừa vặn, không quá dày
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+                ScrollBars = ScrollBars.Both,
+                RowTemplate = { Height = 34 }
             };
+
+            // Kích hoạt DoubleBuffered qua Reflection để loại bỏ 100% hiện tượng xé hình / lỗi vẽ khi phóng to thu nhỏ
+            try
+            {
+                typeof(DataGridView).InvokeMember("DoubleBuffered",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
+                    null, _grid, new object[] { true });
+            }
+            catch { }
 
             _grid.EnableHeadersVisualStyles = false;
             _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
@@ -545,13 +557,29 @@ namespace ADBLogin.UI
             _grid.Columns.Add("clNote", "Ghi Chú");
             _grid.Columns.Add("clPath", "Thư Mục Dữ Liệu");
 
-            _grid.Columns["clId"].Width = 80;
-            _grid.Columns["clName"].Width = 180;
-            _grid.Columns["clTags"].Width = 140;
-            _grid.Columns["clRunningStatus"].Width = 160;
-            _grid.Columns["clProxy"].Width = 135;
-            _grid.Columns["clStatusProxy"].Width = 160;
-            _grid.Columns["clNote"].Width = 95;
+            _grid.Columns["clId"].Width = 75;
+            _grid.Columns["clId"].MinimumWidth = 60;
+
+            _grid.Columns["clName"].Width = 190;
+            _grid.Columns["clName"].MinimumWidth = 140;
+
+            _grid.Columns["clTags"].Width = 150;
+            _grid.Columns["clTags"].MinimumWidth = 120;
+
+            _grid.Columns["clRunningStatus"].Width = 180;
+            _grid.Columns["clRunningStatus"].MinimumWidth = 140;
+
+            _grid.Columns["clProxy"].Width = 145;
+            _grid.Columns["clProxy"].MinimumWidth = 120;
+
+            _grid.Columns["clStatusProxy"].Width = 155;
+            _grid.Columns["clStatusProxy"].MinimumWidth = 125;
+
+            _grid.Columns["clNote"].Width = 120;
+            _grid.Columns["clNote"].MinimumWidth = 80;
+
+            _grid.Columns["clPath"].MinimumWidth = 160;
+            _grid.Columns["clPath"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 
             _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) BtnLaunch_Click(null, null); };
             _grid.MouseDown += Grid_MouseDown;
@@ -686,96 +714,103 @@ namespace ADBLogin.UI
         {
             if (e.RowIndex < 0) return;
 
-            string colName = _grid.Columns[e.ColumnIndex].Name;
-
-            if (colName == "clTags")
+            try
             {
-                e.PaintBackground(e.CellBounds, true);
-                string val = e.Value != null ? e.Value.ToString() : "";
-                DrawTagBadges(e.Graphics, e.CellBounds, val);
-                e.Handled = true;
+                string colName = _grid.Columns[e.ColumnIndex].Name;
+
+                if (colName == "clTags")
+                {
+                    e.PaintBackground(e.CellBounds, true);
+                    string val = e.Value != null ? e.Value.ToString() : "";
+                    DrawTagBadges(e.Graphics, e.CellBounds, val);
+                    e.Handled = true;
+                }
+                else if (colName == "clRunningStatus" && e.Value != null)
+                {
+                    e.PaintBackground(e.CellBounds, true);
+
+                    string val = e.Value.ToString();
+                    bool isRunning = val.Contains("ĐANG MỞ") || val.StartsWith("▶") || val.Contains("Auto") || val.Contains("Đồng Bộ");
+
+                    Color pillBg = Color.FromArgb(243, 244, 246);
+                    Color pillBorder = Color.FromArgb(209, 213, 219);
+                    Color textColor = Color.FromArgb(107, 114, 128);
+
+                    if (val.IndexOf("FB", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        pillBg = Color.FromArgb(239, 246, 255);
+                        pillBorder = Color.FromArgb(191, 219, 254);
+                        textColor = Color.FromArgb(29, 78, 216);
+                    }
+                    else if (val.IndexOf("Shopee", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        pillBg = Color.FromArgb(255, 247, 237);
+                        pillBorder = Color.FromArgb(254, 215, 170);
+                        textColor = Color.FromArgb(194, 65, 12);
+                    }
+                    else if (val.IndexOf("TikTok", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        pillBg = Color.FromArgb(241, 245, 249);
+                        pillBorder = Color.FromArgb(203, 213, 225);
+                        textColor = Color.FromArgb(15, 23, 42);
+                    }
+                    else if (val.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Gmail", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        pillBg = Color.FromArgb(254, 242, 242);
+                        pillBorder = Color.FromArgb(254, 202, 202);
+                        textColor = Color.FromArgb(185, 28, 28);
+                    }
+                    else if (val.IndexOf("Đồng Bộ", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Sync", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        pillBg = Color.FromArgb(238, 242, 255);
+                        pillBorder = Color.FromArgb(199, 210, 254);
+                        textColor = Color.FromArgb(67, 56, 202);
+                    }
+                    else if (isRunning)
+                    {
+                        pillBg = Color.FromArgb(220, 252, 231);
+                        pillBorder = Color.FromArgb(134, 239, 172);
+                        textColor = Color.FromArgb(21, 128, 61);
+                    }
+
+                    DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
+                    e.Handled = true;
+                }
+                else if (colName == "clStatusProxy" && e.Value != null)
+                {
+                    e.PaintBackground(e.CellBounds, true);
+
+                    string val = e.Value.ToString();
+                    Color pillBg = Color.FromArgb(243, 244, 246);
+                    Color pillBorder = Color.FromArgb(229, 231, 235);
+                    Color textColor = Color.FromArgb(75, 85, 99);
+
+                    if (val.Contains("LIVE"))
+                    {
+                        pillBg = Color.FromArgb(236, 253, 245);
+                        pillBorder = Color.FromArgb(167, 243, 208);
+                        textColor = Color.FromArgb(4, 120, 87);
+                    }
+                    else if (val.Contains("DIE"))
+                    {
+                        pillBg = Color.FromArgb(254, 242, 242);
+                        pillBorder = Color.FromArgb(254, 202, 202);
+                        textColor = Color.FromArgb(185, 28, 28);
+                    }
+                    else if (val.Contains("Đang kiểm tra"))
+                    {
+                        pillBg = Color.FromArgb(254, 243, 199);
+                        pillBorder = Color.FromArgb(253, 230, 138);
+                        textColor = Color.FromArgb(180, 83, 9);
+                    }
+
+                    DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
+                    e.Handled = true;
+                }
             }
-            else if (colName == "clRunningStatus" && e.Value != null)
+            catch
             {
-                e.PaintBackground(e.CellBounds, true);
-
-                string val = e.Value.ToString();
-                bool isRunning = val.Contains("ĐANG MỞ") || val.StartsWith("▶") || val.Contains("Auto") || val.Contains("Đồng Bộ");
-
-                Color pillBg = Color.FromArgb(243, 244, 246);
-                Color pillBorder = Color.FromArgb(209, 213, 219);
-                Color textColor = Color.FromArgb(107, 114, 128);
-
-                if (val.IndexOf("FB", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    pillBg = Color.FromArgb(239, 246, 255);
-                    pillBorder = Color.FromArgb(191, 219, 254);
-                    textColor = Color.FromArgb(29, 78, 216);
-                }
-                else if (val.IndexOf("Shopee", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    pillBg = Color.FromArgb(255, 247, 237);
-                    pillBorder = Color.FromArgb(254, 215, 170);
-                    textColor = Color.FromArgb(194, 65, 12);
-                }
-                else if (val.IndexOf("TikTok", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    pillBg = Color.FromArgb(241, 245, 249);
-                    pillBorder = Color.FromArgb(203, 213, 225);
-                    textColor = Color.FromArgb(15, 23, 42);
-                }
-                else if (val.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Gmail", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    pillBg = Color.FromArgb(254, 242, 242);
-                    pillBorder = Color.FromArgb(254, 202, 202);
-                    textColor = Color.FromArgb(185, 28, 28);
-                }
-                else if (val.IndexOf("Đồng Bộ", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Sync", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    pillBg = Color.FromArgb(238, 242, 255);
-                    pillBorder = Color.FromArgb(199, 210, 254);
-                    textColor = Color.FromArgb(67, 56, 202);
-                }
-                else if (isRunning)
-                {
-                    pillBg = Color.FromArgb(220, 252, 231);
-                    pillBorder = Color.FromArgb(134, 239, 172);
-                    textColor = Color.FromArgb(21, 128, 61);
-                }
-
-                DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
-                e.Handled = true;
-            }
-            else if (colName == "clStatusProxy" && e.Value != null)
-            {
-                e.PaintBackground(e.CellBounds, true);
-
-                string val = e.Value.ToString();
-                Color pillBg = Color.FromArgb(243, 244, 246);
-                Color pillBorder = Color.FromArgb(229, 231, 235);
-                Color textColor = Color.FromArgb(75, 85, 99);
-
-                if (val.Contains("LIVE"))
-                {
-                    pillBg = Color.FromArgb(236, 253, 245);
-                    pillBorder = Color.FromArgb(167, 243, 208);
-                    textColor = Color.FromArgb(4, 120, 87);
-                }
-                else if (val.Contains("DIE"))
-                {
-                    pillBg = Color.FromArgb(254, 242, 242);
-                    pillBorder = Color.FromArgb(254, 202, 202);
-                    textColor = Color.FromArgb(185, 28, 28);
-                }
-                else if (val.Contains("Đang kiểm tra"))
-                {
-                    pillBg = Color.FromArgb(254, 243, 199);
-                    pillBorder = Color.FromArgb(253, 230, 138);
-                    textColor = Color.FromArgb(180, 83, 9);
-                }
-
-                DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
-                e.Handled = true;
+                e.Handled = false;
             }
         }
 
@@ -834,98 +869,124 @@ namespace ADBLogin.UI
 
         private void DrawTagBadges(Graphics g, Rectangle bounds, string tagsString)
         {
-            if (string.IsNullOrWhiteSpace(tagsString)) return;
+            if (string.IsNullOrWhiteSpace(tagsString) || bounds.Width < 15 || bounds.Height < 10) return;
 
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            string[] tags = tagsString.Split(new char[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
-            if (tags.Length == 0) return;
-
-            int curX = bounds.X + 6;
-            int curY = bounds.Y + 6;
-            int height = bounds.Height - 12;
-            int maxRight = bounds.Right - 4;
-
-            using (Font font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
+            try
             {
-                for (int i = 0; i < tags.Length; i++)
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                string[] tags = tagsString.Split(new char[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                if (tags.Length == 0) return;
+
+                int curX = bounds.X + 6;
+                int curY = bounds.Y + 6;
+                int height = bounds.Height - 12;
+                if (height < 6) return;
+                int maxRight = bounds.Right - 4;
+
+                using (Font font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
                 {
-                    string tag = tags[i].Trim();
-                    if (string.IsNullOrEmpty(tag)) continue;
-
-                    Color bg, border, text;
-                    GetTagColors(tag, out bg, out border, out text);
-
-                    Size textSize = TextRenderer.MeasureText(tag, font);
-                    int badgeWidth = textSize.Width + 10;
-
-                    if (curX + badgeWidth > maxRight)
+                    for (int i = 0; i < tags.Length; i++)
                     {
-                        if (curX < maxRight - 18)
+                        string tag = tags[i].Trim();
+                        if (string.IsNullOrEmpty(tag)) continue;
+
+                        Color bg, border, text;
+                        GetTagColors(tag, out bg, out border, out text);
+
+                        Size textSize = TextRenderer.MeasureText(tag, font);
+                        int badgeWidth = textSize.Width + 10;
+
+                        if (curX + badgeWidth > maxRight)
                         {
-                            int remaining = tags.Length - i;
-                            string moreText = "+" + remaining;
-                            Rectangle moreRect = new Rectangle(curX, curY, maxRight - curX, height);
-                            using (GraphicsPath p = GetRoundedRectangle(moreRect, 4))
+                            int avail = maxRight - curX;
+                            if (avail >= 18)
                             {
-                                using (SolidBrush b = new SolidBrush(Color.FromArgb(241, 245, 249))) g.FillPath(b, p);
-                                using (Pen pen = new Pen(Color.FromArgb(203, 213, 225), 1f)) g.DrawPath(pen, p);
+                                int remaining = tags.Length - i;
+                                string moreText = "+" + remaining;
+                                Rectangle moreRect = new Rectangle(curX, curY, avail, height);
+                                using (GraphicsPath p = GetRoundedRectangle(moreRect, 4))
+                                {
+                                    using (SolidBrush b = new SolidBrush(Color.FromArgb(241, 245, 249))) g.FillPath(b, p);
+                                    using (Pen pen = new Pen(Color.FromArgb(203, 213, 225), 1f)) g.DrawPath(pen, p);
+                                }
+                                TextRenderer.DrawText(g, moreText, font, moreRect, Color.FromArgb(71, 85, 105),
+                                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                             }
-                            TextRenderer.DrawText(g, moreText, font, moreRect, Color.FromArgb(71, 85, 105),
-                                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                            break;
                         }
-                        break;
-                    }
 
-                    Rectangle badgeRect = new Rectangle(curX, curY, badgeWidth, height);
-                    using (GraphicsPath path = GetRoundedRectangle(badgeRect, 4))
-                    {
-                        using (SolidBrush b = new SolidBrush(bg)) g.FillPath(b, path);
-                        using (Pen pen = new Pen(border, 1f)) g.DrawPath(pen, path);
-                    }
-                    TextRenderer.DrawText(g, tag, font, badgeRect, text,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                        Rectangle badgeRect = new Rectangle(curX, curY, badgeWidth, height);
+                        using (GraphicsPath path = GetRoundedRectangle(badgeRect, 4))
+                        {
+                            using (SolidBrush b = new SolidBrush(bg)) g.FillPath(b, path);
+                            using (Pen pen = new Pen(border, 1f)) g.DrawPath(pen, path);
+                        }
+                        TextRenderer.DrawText(g, tag, font, badgeRect, text,
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 
-                    curX += badgeWidth + 4;
+                        curX += badgeWidth + 4;
+                    }
                 }
             }
+            catch { }
         }
 
         private void DrawPillBadge(Graphics g, Rectangle bounds, string text, Color bg, Color border, Color textColor)
         {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
+            if (bounds.Width < 15 || bounds.Height < 10) return;
 
-            int padX = 6;
-            int padY = 5;
-            Rectangle pillRect = new Rectangle(bounds.X + padX, bounds.Y + padY, bounds.Width - (padX * 2), bounds.Height - (padY * 2));
-
-            using (GraphicsPath path = GetRoundedRectangle(pillRect, 5))
+            try
             {
-                using (SolidBrush brush = new SolidBrush(bg))
-                {
-                    g.FillPath(brush, path);
-                }
-                using (Pen pen = new Pen(border, 1f))
-                {
-                    g.DrawPath(pen, path);
-                }
-            }
+                g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            TextRenderer.DrawText(
-                g,
-                text,
-                new Font("Segoe UI", 8F, FontStyle.Bold),
-                pillRect,
-                textColor,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordEllipsis
-            );
+                int padX = 6;
+                int padY = 5;
+                int w = bounds.Width - (padX * 2);
+                int h = bounds.Height - (padY * 2);
+                if (w < 8 || h < 8) return;
+
+                Rectangle pillRect = new Rectangle(bounds.X + padX, bounds.Y + padY, w, h);
+
+                using (GraphicsPath path = GetRoundedRectangle(pillRect, 5))
+                {
+                    using (SolidBrush brush = new SolidBrush(bg))
+                    {
+                        g.FillPath(brush, path);
+                    }
+                    using (Pen pen = new Pen(border, 1f))
+                    {
+                        g.DrawPath(pen, path);
+                    }
+                }
+
+                TextRenderer.DrawText(
+                    g,
+                    text ?? "",
+                    new Font("Segoe UI", 8F, FontStyle.Bold),
+                    pillRect,
+                    textColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordEllipsis
+                );
+            }
+            catch { }
         }
 
         private GraphicsPath GetRoundedRectangle(Rectangle rect, int radius)
         {
             GraphicsPath path = new GraphicsPath();
+            if (rect.Width <= 0 || rect.Height <= 0) return path;
+
+            int maxR = Math.Min(rect.Width / 2, rect.Height / 2);
+            if (radius > maxR) radius = maxR;
+            if (radius < 1)
+            {
+                path.AddRectangle(rect);
+                return path;
+            }
+
             int diameter = radius * 2;
             path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
-            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.X, diameter, diameter, 270, 90);
             path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
             path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
             path.CloseFigure();
