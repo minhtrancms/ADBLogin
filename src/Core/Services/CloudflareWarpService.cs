@@ -250,13 +250,32 @@ namespace ADBLogin.Core.Services
             return null;
         }
 
+        private static readonly string[] CloudflareEndpoints = new string[]
+        {
+            "162.159.192.1:2408",
+            "188.114.96.1:2408",
+            "162.159.192.2:500",
+            "188.114.97.1:1701",
+            "162.159.193.10:2408",
+            "188.114.98.1:4500",
+            "162.159.195.1:854",
+            "188.114.99.1:2408",
+            "162.159.192.3:2408",
+            "162.159.192.4:500",
+            "188.114.96.2:1701",
+            "188.114.97.2:2408"
+        };
+
         private string GenerateWireproxyConfig(int port, string wgcfProfilePath)
         {
             string content = File.ReadAllText(wgcfProfilePath);
             string privateKey = "";
             string address = "172.16.0.2/32";
             string publicKey = "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=";
-            string endpoint = "162.159.192.1:2408";
+            
+            // Xoay vong endpoint de tranh Cloudflare gom vao cung 1 cum IP NAT
+            int epIdx = Math.Abs(port.GetHashCode()) % CloudflareEndpoints.Length;
+            string endpoint = CloudflareEndpoints[epIdx];
 
             var mKey = Regex.Match(content, @"PrivateKey\s*=\s*(.+)");
             if (mKey.Success) privateKey = mKey.Groups[1].Value.Trim();
