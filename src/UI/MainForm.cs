@@ -114,49 +114,12 @@ namespace ADBLogin.UI
             _lblStatsProxy = CreateStatChip("Proxy: 0", Color.FromArgb(51, 65, 85), 425);
             _lblStatsSelected = CreateStatChip("Đã chọn: 0", Color.FromArgb(79, 70, 229), 525);
 
-            // Ô tìm kiếm siêu gọn góc phải (Tự động co giãn theo mép phải)
-            Panel searchBoxPanel = new Panel
-            {
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(1300 - 325, 9),
-                Size = new Size(300, 30),
-                BackColor = Color.FromArgb(30, 41, 59)
-            };
-
-            Label lblSearchIcon = new Label
-            {
-                Text = "🔍",
-                ForeColor = Color.FromArgb(148, 163, 184),
-                Location = new Point(6, 6),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 8.5F)
-            };
-
-            _txtSearch = new TextBox
-            {
-                Location = new Point(28, 6),
-                Width = 265,
-                BorderStyle = BorderStyle.None,
-                BackColor = Color.FromArgb(30, 41, 59),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F)
-            };
-            _txtSearch.TextChanged += (s, e) => FilterData();
-
-            searchBoxPanel.Controls.Add(lblSearchIcon);
-            searchBoxPanel.Controls.Add(_txtSearch);
-
             headerPanel.Controls.Add(lblLogo);
             headerPanel.Controls.Add(lblBadge);
             headerPanel.Controls.Add(_lblStatsTotal);
             headerPanel.Controls.Add(_lblStatsRunning);
             headerPanel.Controls.Add(_lblStatsProxy);
             headerPanel.Controls.Add(_lblStatsSelected);
-            headerPanel.Controls.Add(searchBoxPanel);
-            headerPanel.Resize += (s, e) =>
-            {
-                searchBoxPanel.Location = new Point(headerPanel.ClientSize.Width - searchBoxPanel.Width - 14, 9);
-            };
 
             // ================= 2. SMART COMMAND BAR (DÒNG 1: CÁC NÚT HÀNH ĐỘNG & MENU THÔNG MINH) =================
             Panel pnlProfileBar = new Panel
@@ -340,6 +303,49 @@ namespace ADBLogin.UI
                 e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240)), 0, pnlFilterBar.Height - 1, pnlFilterBar.Width, pnlFilterBar.Height - 1);
             };
 
+            // 0. Ô tìm kiếm Profile Name / Email / Proxy / Tag trực tiếp trên Toolbar Dòng 2
+            _txtSearch = new TextBox
+            {
+                Width = 210,
+                Height = 24,
+                Font = new Font("Segoe UI", 8.5F),
+                BorderStyle = BorderStyle.FixedSingle,
+                ForeColor = Color.FromArgb(100, 116, 139),
+                Text = "🔍 Tìm profile, proxy, tag..."
+            };
+            _txtSearch.GotFocus += (s, e) =>
+            {
+                if (_txtSearch.Text == "🔍 Tìm profile, proxy, tag...")
+                {
+                    _txtSearch.Text = "";
+                    _txtSearch.ForeColor = Color.FromArgb(15, 23, 42);
+                }
+            };
+            _txtSearch.LostFocus += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(_txtSearch.Text))
+                {
+                    _txtSearch.Text = "🔍 Tìm profile, proxy, tag...";
+                    _txtSearch.ForeColor = Color.FromArgb(100, 116, 139);
+                }
+            };
+            _txtSearch.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Escape)
+                {
+                    _txtSearch.Text = "";
+                    if (string.IsNullOrWhiteSpace(_txtSearch.Text))
+                    {
+                        _txtSearch.Text = "🔍 Tìm profile, proxy, tag...";
+                        _txtSearch.ForeColor = Color.FromArgb(100, 116, 139);
+                    }
+                    this.ActiveControl = _grid;
+                    e.Handled = true;
+                }
+            };
+            _txtSearch.TextChanged += (s, e) => FilterData();
+            toolTip.SetToolTip(_txtSearch, "Tìm nhanh tên profile, email, proxy, id, ghi chú hoặc tag (Nhấn ESC để hủy tìm)");
+
             // 1. Bộ lọc Status & Tag
             Label lblFilter = new Label { Text = "Lọc:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
             _cboFilterStatus = new ComboBox
@@ -420,6 +426,8 @@ namespace ADBLogin.UI
             _btnRefresh = CreateCompactButton("🔄 Làm Mới", Color.FromArgb(255, 255, 255), Color.FromArgb(51, 65, 85), 78, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
             _btnRefresh.Click += (s, e) => LoadData();
 
+            pnlFilterBar.Controls.Add(_txtSearch);
+            pnlFilterBar.Controls.Add(CreateDivider());
             pnlFilterBar.Controls.Add(lblFilter);
             pnlFilterBar.Controls.Add(_cboFilterStatus);
             pnlFilterBar.Controls.Add(_cboFilterTag);
@@ -686,6 +694,11 @@ namespace ADBLogin.UI
                     currentX += c.Width + gap;
                 }
                 else if (c is ComboBox)
+                {
+                    c.Location = new Point(currentX, 7);
+                    currentX += c.Width + gap;
+                }
+                else if (c is TextBox)
                 {
                     c.Location = new Point(currentX, 7);
                     currentX += c.Width + gap;
@@ -1973,7 +1986,12 @@ namespace ADBLogin.UI
         private void FilterData()
         {
             _grid.Rows.Clear();
-            string keyword = _txtSearch.Text.Trim().ToLower();
+            string keyword = _txtSearch != null ? _txtSearch.Text.Trim() : "";
+            if (keyword == "🔍 Tìm profile, proxy, tag...")
+            {
+                keyword = "";
+            }
+            keyword = keyword.ToLower();
             string statusFilter = _cboFilterStatus != null && _cboFilterStatus.SelectedIndex > 0 
                 ? _cboFilterStatus.SelectedItem.ToString() : "Tất cả trạng thái";
             string tagFilter = _cboFilterTag != null && _cboFilterTag.SelectedIndex > 0 
