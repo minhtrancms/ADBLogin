@@ -4,7 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -364,9 +367,34 @@ namespace ADBLogin.Core.Services
 
             Log(string.Format("Đang khởi động cổng {0} (Máy chủ: {1})...", port, item.ServerName));
 
+            bool isNordVpn = (!string.IsNullOrEmpty(item.OvpnPath) && item.OvpnPath.IndexOf("nordvpn", StringComparison.OrdinalIgnoreCase) >= 0)
+                          || (!string.IsNullOrEmpty(item.ServerName) && item.ServerName.IndexOf("nordvpn", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            string upstreamHost = null;
+            int upstreamPort = 0;
+            string upstreamUser = null;
+            string upstreamPass = null;
+            bool upstreamSsl = false;
             string detectedTunnelIp = null;
 
-            if (hasOpenVpn && !string.IsNullOrEmpty(item.OvpnPath) && File.Exists(item.OvpnPath))
+            if (isNordVpn)
+            {
+                // Trích xuất hostname NordVPN (ví dụ vn57.nordvpn.com)
+                string host = Path.GetFileNameWithoutExtension(!string.IsNullOrEmpty(item.OvpnPath) ? item.OvpnPath : item.ServerName).Replace(".udp", "").Replace(".tcp", "").Trim();
+                if (!host.EndsWith(".nordvpn.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    host = host + ".nordvpn.com";
+                }
+                upstreamHost = host;
+                upstreamPort = 89;
+                upstreamUser = Config.Username;
+                upstreamPass = Config.Password;
+                upstreamSsl = true;
+
+                Log(string.Format("Cổng {0}: Cầu nối bảo mật trực tiếp NordVPN SSL Proxy ({1}:89)...", port, upstreamHost));
+                item.StatusText = "Đang kết nối NordVPN...";
+            }
+            else if (hasOpenVpn && !string.IsNullOrEmpty(item.OvpnPath) && File.Exists(item.OvpnPath))
             {
                 // Dùng OpenVPN engine thật
                 try
@@ -381,7 +409,6 @@ namespace ADBLogin.Core.Services
             }
             else
             {
-                // Chế độ mô phỏng / Direct Proxy Bridge (Giúp test mượt mà ngay cả khi chưa nạp OpenVPN)
                 Log(string.Format("Cổng {0}: Chạy chế độ Local HTTP Proxy Bridge độc lập...", port));
                 item.StatusText = "Bridge HTTP Sẵn Sàng";
             }
@@ -389,10 +416,10 @@ namespace ADBLogin.Core.Services
             // Khởi động Local HTTP Proxy Server trên 127.0.0.1:port
             try
             {
-                StartLocalProxyListener(item.Port, detectedTunnelIp);
+                StartLocalProxyListener(item.Port, detectedTunnelIp, upstreamHost, upstreamPort, upstreamUser, upstreamPass, upstreamSsl, strictVpn: isNordVpn || !string.IsNullOrEmpty(item.OvpnPath));
                 item.LocalTunnelIp = detectedTunnelIp;
                 item.Status = HmaTunnelStatus.Connected;
-                item.StatusText = !string.IsNullOrEmpty(detectedTunnelIp) ? "Đang chạy (VPN)" : "Đang chạy (Local)";
+                item.StatusText = isNordVpn ? "Đang chạy (NordVPN SSL)" : (!string.IsNullOrEmpty(detectedTunnelIp) ? "Đang chạy (VPN)" : "Đang chạy (Local)");
                 NotifyStatusChanged(item);
 
                 Log(string.Format("✅ Cổng {0} đã mở thành công! (127.0.0.1:{0})", port));
@@ -517,7 +544,7 @@ namespace ADBLogin.Core.Services
             return detectedIp;
         }
 
-        private void StartLocalProxyListener(int port, string outboundBindingIp)
+        private void StartLocalProxyListener(int port, string outboundBindingIp, string upstreamHost = null, int upstreamPort = 0, string upstreamUser = null, string upstreamPass = null, bool upstreamSsl = false, bool strictVpn = false)
         {
             lock (_lock)
             {
@@ -527,7 +554,15 @@ namespace ADBLogin.Core.Services
                     _runningProxies.Remove(port);
                 }
 
-                var server = new LocalHttpProxyServer(port, outboundBindingIp);
+                var server = new LocalHttpProxyServer(port, outboundBindingIp)
+                {
+                    UpstreamHost = upstreamHost,
+                    UpstreamPort = upstreamPort,
+                    UpstreamUser = upstreamUser,
+                    UpstreamPass = upstreamPass,
+                    UpstreamSsl = upstreamSsl,
+                    StrictVpnOnly = strictVpn
+                };
                 server.Start();
                 _runningProxies[port] = server;
             }
@@ -656,7 +691,7 @@ namespace ADBLogin.Core.Services
                 {
                     var req2 = (HttpWebRequest)WebRequest.Create("http://api.ipify.org");
                     req2.Proxy = new WebProxy("127.0.0.1", item.Port);
-                    req2.Timeout = 5000;
+                    req2.Timeout = 6000;
                     using (var resp2 = (HttpWebResponse)await req2.GetResponseAsync())
                     using (var s2 = resp2.GetResponseStream())
                     using (var r2 = new StreamReader(s2))
@@ -666,13 +701,32 @@ namespace ADBLogin.Core.Services
                         item.Country = "Quốc tế";
                         item.StatusText = "🟢 LIVE";
                         NotifyStatusChanged(item);
+                        ipFound = true;
                     }
                 }
                 catch (Exception ex2)
                 {
-                    item.StatusText = "Chưa nhận IP (" + ex2.Message + ")";
-                    NotifyStatusChanged(item);
+                    item.LastError = ex2.Message;
                 }
+            }
+
+            if (!ipFound)
+            {
+                item.PublicIp = "---";
+                if (!string.IsNullOrEmpty(item.LastError) && (item.LastError.Contains("407") || item.LastError.Contains("Proxy Authentication")))
+                {
+                    item.StatusText = "⚠️ Hết phiên (Session limit)";
+                    Log(string.Format("Cổng {0}: Tài khoản NordVPN đã hết lượt kết nối đồng thời (Session limit reached).", item.Port));
+                }
+                else if (!string.IsNullOrEmpty(item.LastError) && item.LastError.Contains("503"))
+                {
+                    item.StatusText = "⚠️ Kill-Switch chặn lộ IP";
+                }
+                else
+                {
+                    item.StatusText = "❌ Chưa nhận IP";
+                }
+                NotifyStatusChanged(item);
             }
         }
 
@@ -743,6 +797,12 @@ namespace ADBLogin.Core.Services
     {
         public int Port { get; private set; }
         public string OutboundBindingIp { get; private set; }
+        public string UpstreamHost { get; set; }
+        public int UpstreamPort { get; set; }
+        public string UpstreamUser { get; set; }
+        public string UpstreamPass { get; set; }
+        public bool UpstreamSsl { get; set; }
+        public bool StrictVpnOnly { get; set; }
 
         private TcpListener _listener;
         private CancellationTokenSource _cts;
@@ -823,6 +883,66 @@ namespace ADBLogin.Core.Services
                     }
 
                     if (string.IsNullOrEmpty(headerStr)) return;
+
+                    // 1. CHẾ ĐỘ UPSTREAM PROXY (Cầu nối bảo mật NordVPN SSL Proxy trên Port 89)
+                    if (!string.IsNullOrEmpty(UpstreamHost) && UpstreamPort > 0)
+                    {
+                        using (var upstreamClient = new TcpClient())
+                        {
+                            await upstreamClient.ConnectAsync(UpstreamHost, UpstreamPort);
+                            Stream targetStream = upstreamClient.GetStream();
+                            SslStream sslStream = null;
+
+                            if (UpstreamSsl)
+                            {
+                                sslStream = new SslStream(targetStream, false, (s, cert, chain, err) => true);
+                                await sslStream.AuthenticateAsClientAsync(UpstreamHost, null, SslProtocols.Tls12, false);
+                                targetStream = sslStream;
+                            }
+
+                            try
+                            {
+                                string forwardHeader = headerStr;
+                                if (!string.IsNullOrEmpty(UpstreamUser))
+                                {
+                                    string auth = Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", UpstreamUser, UpstreamPass ?? string.Empty)));
+                                    string authHeader = string.Format("\r\nProxy-Authorization: Basic {0}\r\n\r\n", auth);
+                                    int insertPos = forwardHeader.IndexOf("\r\n\r\n");
+                                    if (insertPos >= 0)
+                                    {
+                                        forwardHeader = forwardHeader.Substring(0, insertPos) + authHeader;
+                                    }
+                                }
+
+                                byte[] forwardBytes = Encoding.ASCII.GetBytes(forwardHeader);
+                                await targetStream.WriteAsync(forwardBytes, 0, forwardBytes.Length, token);
+
+                                int initialHeaderLen = endHeaderIdx + 4;
+                                byte[] fullBytes = ms.ToArray();
+                                if (fullBytes.Length > initialHeaderLen)
+                                {
+                                    await targetStream.WriteAsync(fullBytes, initialHeaderLen, fullBytes.Length - initialHeaderLen, token);
+                                }
+
+                                var t1 = RelayStreamAsync(clientStream, targetStream, token);
+                                var t2 = RelayStreamAsync(targetStream, clientStream, token);
+                                await Task.WhenAny(t1, t2);
+                            }
+                            finally
+                            {
+                                if (sslStream != null) sslStream.Dispose();
+                            }
+                        }
+                        return;
+                    }
+
+                    // 2. CHẾ ĐỘ KILL-SWITCH: Tuyệt đối không để lộ IP thật của máy nếu VPN chưa kết nối thành công
+                    if (StrictVpnOnly && string.IsNullOrEmpty(OutboundBindingIp))
+                    {
+                        byte[] err503 = Encoding.ASCII.GetBytes("HTTP/1.1 503 Service Unavailable\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nVPN chua ket noi. Kill-Switch da kich hoat de bao ve IP that cua ban.\r\n");
+                        await clientStream.WriteAsync(err503, 0, err503.Length, token);
+                        return;
+                    }
 
                     string[] lines = headerStr.Split(new string[] { "\r\n" }, StringSplitOptions.None);
                     if (lines.Length == 0) return;
