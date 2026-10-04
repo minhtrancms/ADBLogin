@@ -43,6 +43,7 @@ namespace ADBLogin.UI
         private Button _btnScheduler;
         private Button _btnBatchImport;
         private Button _btnSync;
+        private Button _btnHmaProxy;
         private Button _btnAdvSettings;
 
         private NumericUpDown _numRows;
@@ -488,6 +489,21 @@ namespace ADBLogin.UI
                 }
             };
 
+            _btnHmaProxy = CreateCompactButton("🌐 HMA Multi-Proxy", Color.FromArgb(14, 165, 233), Color.White, 130, true, "Quản lý tạo Multi-Proxy từ HMA OpenVPN (.ovpn)", Color.FromArgb(2, 132, 199));
+            _btnHmaProxy.Click += (s, e) =>
+            {
+                try
+                {
+                    var hmaForm = new HmaMultiProxyForm(_accountManager.GetAllProfiles());
+                    hmaForm.FormClosed += (fs, fe) => LoadData();
+                    hmaForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở HMA Multi-Proxy:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
             pnlAutomationBar.Controls.Add(lblAutoTitle);
             pnlAutomationBar.Controls.Add(_btnFacebookAuto);
             pnlAutomationBar.Controls.Add(_btnGoogleAuto);
@@ -500,6 +516,7 @@ namespace ADBLogin.UI
             pnlAutomationBar.Controls.Add(_btnScheduler);
             pnlAutomationBar.Controls.Add(CreateDivider());
             pnlAutomationBar.Controls.Add(_btnSync);
+            pnlAutomationBar.Controls.Add(_btnHmaProxy);
             pnlAutomationBar.Controls.Add(_btnAdvSettings);
 
             LayoutCompactToolbar(pnlAutomationBar);
@@ -1315,6 +1332,23 @@ namespace ADBLogin.UI
                 catch (Exception ex)
                 {
                     MessageBox.Show(string.Format("Lỗi mở giao diện Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            var itemHmaProxy = _contextMenu.Items.Add("🌐 Quản Lý HMA Multi-Proxy");
+            itemHmaProxy.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemHmaProxy.ForeColor = Color.FromArgb(14, 165, 233);
+            itemHmaProxy.Click += (s, e) =>
+            {
+                try
+                {
+                    var hmaForm = new HmaMultiProxyForm(_accountManager.GetAllProfiles());
+                    hmaForm.FormClosed += (fs, fe) => LoadData();
+                    hmaForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở HMA Multi-Proxy:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
 
