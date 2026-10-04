@@ -47,17 +47,26 @@ namespace ADBLogin.Core.Models
         public long PingMs { get; set; }
         public string LocalTunnelIp { get; set; }
         public int ProcessId { get; set; }
+        public string Protocol { get; set; }
         public string LastError { get; set; }
         public List<string> AssignedProfileNames { get; set; }
 
         public string ProxyAddress
         {
-            get { return string.Format("127.0.0.1:{0}", Port); }
+            get
+            {
+                if (string.Equals(Protocol, "socks5", StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Format("socks5://127.0.0.1:{0}", Port);
+                }
+                return string.Format("127.0.0.1:{0}", Port);
+            }
         }
 
         public HmaProxyPortItem()
         {
             Port = 10001;
+            Protocol = "http";
             OvpnPath = string.Empty;
             ServerName = "Tự động";
             Status = HmaTunnelStatus.Stopped;

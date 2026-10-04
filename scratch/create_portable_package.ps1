@@ -110,6 +110,11 @@ if (Test-Path "$workspace\automation") {
     Copy-Item "$workspace\automation" "$stagingApp\" -Recurse -Force
 }
 
+Write-Host "=== 8.1 Sao chep Tools (Wireproxy & Wgcf cho Cloudflare WARP) ===" -ForegroundColor Cyan
+if (Test-Path "$workspace\tools") {
+    Copy-Item "$workspace\tools" "$stagingApp\" -Recurse -Force
+}
+
 Write-Host "=== 9. Cau hinh config.json va profiles.json ===" -ForegroundColor Cyan
 $configContent = @"
 {

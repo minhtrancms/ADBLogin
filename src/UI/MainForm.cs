@@ -489,7 +489,7 @@ namespace ADBLogin.UI
                 }
             };
 
-            _btnHmaProxy = CreateCompactButton("🌐 HMA Multi-Proxy", Color.FromArgb(14, 165, 233), Color.White, 130, true, "Quản lý tạo Multi-Proxy từ HMA OpenVPN (.ovpn)", Color.FromArgb(2, 132, 199));
+            _btnHmaProxy = CreateCompactButton("🌐 Multi-Proxy Studio", Color.FromArgb(14, 165, 233), Color.White, 140, true, "Quản lý tạo Multi-Proxy từ Cloudflare WARP (Miễn phí) & OpenVPN / HMA / NordVPN", Color.FromArgb(2, 132, 199));
             _btnHmaProxy.Click += (s, e) =>
             {
                 try
@@ -1335,7 +1335,7 @@ namespace ADBLogin.UI
                 }
             };
 
-            var itemHmaProxy = _contextMenu.Items.Add("🌐 Quản Lý HMA Multi-Proxy");
+            var itemHmaProxy = _contextMenu.Items.Add("🌐 Quản Lý Multi-Proxy Studio (WARP & VPN)");
             itemHmaProxy.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             itemHmaProxy.ForeColor = Color.FromArgb(14, 165, 233);
             itemHmaProxy.Click += (s, e) =>
