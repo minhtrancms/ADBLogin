@@ -122,14 +122,64 @@ namespace ADBLogin.UI
 
             // 4. Proxy
             Label lblProxy = new Label { Text = "Địa chỉ Proxy:", Location = new Point(labelX, 218), AutoSize = true, ForeColor = Color.FromArgb(51, 65, 85), Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            _txtProxy = new TextBox { Location = new Point(inputX, 215), Width = inputWidth, Font = new Font("Segoe UI", 10F) };
+            _txtProxy = new TextBox { Location = new Point(inputX, 215), Width = inputWidth - 105, Font = new Font("Segoe UI", 10F) };
+
+            Button btnTestProxy = new Button
+            {
+                Text = "🔍 Test Proxy",
+                Location = new Point(inputX + inputWidth - 100, 214),
+                Width = 100,
+                Height = 28,
+                BackColor = Color.FromArgb(14, 165, 233),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnTestProxy.FlatAppearance.BorderSize = 0;
+
             Label lblProxyHint = new Label 
             { 
                 Text = "Định dạng: IP:Port hoặc IP:Port:User:Pass (Để trống nếu dùng Direct)", 
-                Location = new Point(inputX, 243), 
+                Location = new Point(inputX, 245), 
                 AutoSize = true, 
                 ForeColor = Color.FromArgb(100, 116, 139), 
                 Font = new Font("Segoe UI", 8F) 
+            };
+
+            btnTestProxy.Click += (s, e) =>
+            {
+                string pxy = _txtProxy.Text.Trim();
+                if (string.IsNullOrEmpty(pxy))
+                {
+                    lblProxyHint.Text = "🟢 Direct IP (Không dùng Proxy - Mạng gốc máy tính)";
+                    lblProxyHint.ForeColor = Color.FromArgb(16, 185, 129);
+                    return;
+                }
+
+                btnTestProxy.Enabled = false;
+                lblProxyHint.Text = "⏳ Đang kết nối kiểm tra Proxy...";
+                lblProxyHint.ForeColor = Color.FromArgb(217, 119, 6);
+
+                System.Threading.ThreadPool.QueueUserWorkItem((state) =>
+                {
+                    var checker = new ADBLogin.Core.Services.ProxyCheckerService();
+                    var result = checker.CheckProxyString(pxy);
+                    this.Invoke((MethodInvoker)(() =>
+                    {
+                        btnTestProxy.Enabled = true;
+                        if (result.IsLive)
+                        {
+                            lblProxyHint.Text = string.Format("✅ Proxy Hoạt Động! IP: {0} | Ping: {1}ms", result.ExternalIp, result.PingMs);
+                            lblProxyHint.ForeColor = Color.FromArgb(16, 185, 129);
+                        }
+                        else
+                        {
+                            lblProxyHint.Text = string.Format("❌ Kết nối thất bại: {0}", string.IsNullOrEmpty(result.Message) ? "Không thể kết nối" : result.Message);
+                            lblProxyHint.ForeColor = Color.FromArgb(239, 68, 68);
+                        }
+                    }));
+                });
             };
 
             // 5. User-Agent
@@ -195,6 +245,7 @@ namespace ADBLogin.UI
             this.Controls.Add(_cboBrowserVersion);
             this.Controls.Add(lblProxy);
             this.Controls.Add(_txtProxy);
+            this.Controls.Add(btnTestProxy);
             this.Controls.Add(lblProxyHint);
             this.Controls.Add(lblUA);
             this.Controls.Add(_txtUserAgent);

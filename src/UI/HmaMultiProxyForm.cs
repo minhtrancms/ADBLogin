@@ -997,7 +997,72 @@ namespace ADBLogin.UI
         private void Grid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
             var grid = sender as DataGridView;
-            if (grid != null && e.RowIndex >= 0 && e.ColumnIndex == grid.Columns["clStatus"].Index && e.Value != null)
+            if (grid == null || e.RowIndex < 0) return;
+
+            if (grid.Columns.Contains("clAction") && e.ColumnIndex == grid.Columns["clAction"].Index)
+            {
+                e.PaintBackground(e.CellBounds, true);
+                var itm = grid.Rows[e.RowIndex].Tag as HmaProxyPortItem;
+                bool isConnected = itm != null && itm.Status == HmaTunnelStatus.Connected;
+
+                int btnW = e.CellBounds.Width - 12;
+                int btnH = 22;
+                int btnX = e.CellBounds.X + 6;
+                int btnY = e.CellBounds.Y + (e.CellBounds.Height - btnH) / 2;
+                var rect = new Rectangle(btnX, btnY, btnW, btnH);
+
+                Color bg = isConnected ? Color.FromArgb(239, 68, 68) : Color.FromArgb(16, 185, 129);
+                string text = isConnected ? "⏹ Dừng" : "▶ Bật";
+
+                using (var brush = new SolidBrush(bg))
+                {
+                    e.Graphics.FillRectangle(brush, rect);
+                }
+                using (var font = new Font("Segoe UI", 8F, FontStyle.Bold))
+                {
+                    TextRenderer.DrawText(e.Graphics, text, font, rect, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                e.Handled = true;
+            }
+            else if (grid.Columns.Contains("clRotateIp") && e.ColumnIndex == grid.Columns["clRotateIp"].Index)
+            {
+                e.PaintBackground(e.CellBounds, true);
+                int btnW = e.CellBounds.Width - 12;
+                int btnH = 22;
+                int btnX = e.CellBounds.X + 6;
+                int btnY = e.CellBounds.Y + (e.CellBounds.Height - btnH) / 2;
+                var rect = new Rectangle(btnX, btnY, btnW, btnH);
+
+                using (var brush = new SolidBrush(Color.FromArgb(14, 165, 233)))
+                {
+                    e.Graphics.FillRectangle(brush, rect);
+                }
+                using (var font = new Font("Segoe UI", 8F, FontStyle.Bold))
+                {
+                    TextRenderer.DrawText(e.Graphics, "🔄 Đổi IP", font, rect, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                e.Handled = true;
+            }
+            else if (grid.Columns.Contains("clAssignRow") && e.ColumnIndex == grid.Columns["clAssignRow"].Index)
+            {
+                e.PaintBackground(e.CellBounds, true);
+                int btnW = e.CellBounds.Width - 12;
+                int btnH = 22;
+                int btnX = e.CellBounds.X + 6;
+                int btnY = e.CellBounds.Y + (e.CellBounds.Height - btnH) / 2;
+                var rect = new Rectangle(btnX, btnY, btnW, btnH);
+
+                using (var brush = new SolidBrush(Color.FromArgb(99, 102, 241)))
+                {
+                    e.Graphics.FillRectangle(brush, rect);
+                }
+                using (var font = new Font("Segoe UI", 8F, FontStyle.Bold))
+                {
+                    TextRenderer.DrawText(e.Graphics, "⚡ Gán", font, rect, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                e.Handled = true;
+            }
+            else if (grid.Columns.Contains("clStatus") && e.ColumnIndex == grid.Columns["clStatus"].Index && e.Value != null)
             {
                 e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
 

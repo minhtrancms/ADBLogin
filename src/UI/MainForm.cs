@@ -18,7 +18,12 @@ namespace ADBLogin.UI
         private Label _lblStatsTotal;
         private Label _lblStatsRunning;
         private Label _lblStatsProxy;
+        private Label _lblStatsSelected;
         private Label _lblStatus;
+
+        private ComboBox _cboFilterStatus;
+        private ComboBox _cboFilterTag;
+        private bool _allChecked = false;
 
         private Button _btnLaunch;
         private Button _btnStop;
@@ -27,7 +32,6 @@ namespace ADBLogin.UI
         private Button _btnCheckProxy;
         private Button _btnCheckAllProxy;
         private Button _btnAdd;
-        private Button _btnEdit;
         private Button _btnQuickTag;
         private Button _btnDelete;
         private Button _btnOpenFolder;
@@ -123,6 +127,7 @@ namespace ADBLogin.UI
             _lblStatsTotal = CreateStatChip("Tổng: 0", Color.FromArgb(30, 41, 59), 230);
             _lblStatsRunning = CreateStatChip("Đang mở: 0", Color.FromArgb(6, 78, 59), 320);
             _lblStatsProxy = CreateStatChip("Proxy: 0", Color.FromArgb(51, 65, 85), 425);
+            _lblStatsSelected = CreateStatChip("Đã chọn: 0", Color.FromArgb(79, 70, 229), 525);
 
             // Ô tìm kiếm siêu gọn góc phải (Tự động co giãn theo mép phải)
             Panel searchBoxPanel = new Panel
@@ -161,6 +166,7 @@ namespace ADBLogin.UI
             headerPanel.Controls.Add(_lblStatsTotal);
             headerPanel.Controls.Add(_lblStatsRunning);
             headerPanel.Controls.Add(_lblStatsProxy);
+            headerPanel.Controls.Add(_lblStatsSelected);
             headerPanel.Controls.Add(searchBoxPanel);
             headerPanel.Resize += (s, e) =>
             {
@@ -182,21 +188,14 @@ namespace ADBLogin.UI
 
             ToolTip toolTip = new ToolTip();
 
-            // Group 1: Vận hành (Run Control)
-            _btnLaunch = CreateCompactButton("▶ Mở", Color.FromArgb(16, 185, 129), Color.White, 62, true, "Khởi chạy các profile đã chọn (Enter)", Color.FromArgb(5, 150, 105));
-            _btnLaunch.Click += BtnLaunch_Click;
+            // Group 1: Tạo mới & Nhập Nick (GoLogin Primary Actions)
+            _btnAdd = CreateCompactButton("➕ Thêm Profile", Color.FromArgb(37, 99, 235), Color.White, 118, true, "Thêm một profile mới thủ công (GoLogin style)", Color.FromArgb(29, 78, 216));
+            _btnAdd.Click += BtnAdd_Click;
 
-            _btnStop = CreateCompactButton("⏹ Tắt", Color.FromArgb(239, 68, 68), Color.White, 54, true, "Đóng trình duyệt profile đang chọn", Color.FromArgb(220, 38, 38));
-            _btnStop.Click += BtnStop_Click;
-
-            _btnStopAll = CreateCompactButton("Tắt Hết", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 58, false, "Đóng tất cả các trình duyệt đang mở", Color.FromArgb(254, 226, 226));
-            _btnStopAll.Click += BtnStopAll_Click;
-
-            // Group 2: Thao tác Profile
-            _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(99, 102, 241), Color.White, 84, true, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(79, 70, 229));
+            _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 86, false, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(226, 232, 240));
             _btnAutoCreate.Click += BtnAutoCreate_Click;
 
-            _btnBatchImport = CreateCompactButton("📥 Nhập Pro", Color.FromArgb(16, 185, 129), Color.White, 78, true, "Nhập tài khoản hàng loạt theo định dạng UID|Pass|2FA|Email|Proxy", Color.FromArgb(5, 150, 105));
+            _btnBatchImport = CreateCompactButton("📥 Nhập Nick", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 84, false, "Nhập tài khoản hàng loạt theo định dạng UID|Pass|2FA|Email|Proxy", Color.FromArgb(226, 232, 240));
             _btnBatchImport.Click += (s, e) =>
             {
                 using (var impForm = new BatchAccountImporterForm())
@@ -208,27 +207,31 @@ namespace ADBLogin.UI
                 }
             };
 
-            _btnAdd = CreateCompactButton("+ Thêm", Color.FromArgb(37, 99, 235), Color.White, 58, true, "Thêm một profile mới thủ công", Color.FromArgb(29, 78, 216));
-            _btnAdd.Click += BtnAdd_Click;
+            // Group 2: Vận hành hàng loạt (Bulk Actions)
+            _btnLaunch = CreateCompactButton("▶ Chạy", Color.FromArgb(16, 185, 129), Color.White, 72, true, "Khởi chạy các profile đã chọn", Color.FromArgb(5, 150, 105));
+            _btnLaunch.Click += BtnLaunch_Click;
 
-            _btnEdit = CreateCompactButton("✏️ Sửa", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 50, false, "Chỉnh sửa cấu hình profile đang chọn", Color.FromArgb(241, 245, 249));
-            _btnEdit.Click += BtnEdit_Click;
+            _btnStop = CreateCompactButton("⏹ Dừng", Color.FromArgb(239, 68, 68), Color.White, 70, true, "Đóng trình duyệt các profile đã chọn", Color.FromArgb(220, 38, 38));
+            _btnStop.Click += BtnStop_Click;
 
-            _btnQuickTag = CreateCompactButton("🏷️ Tag", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Gắn nhãn (tags) nhanh cho các profile đang chọn", Color.FromArgb(241, 245, 249));
-            _btnQuickTag.Click += (s, e) => ShowQuickTagDialog();
+            _btnStopAll = CreateCompactButton("Tắt Hết", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 58, false, "Đóng tất cả các trình duyệt đang mở", Color.FromArgb(254, 226, 226));
+            _btnStopAll.Click += BtnStopAll_Click;
 
-            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 50, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
-            _btnDelete.Click += BtnDelete_Click;
-
-            _btnOpenFolder = CreateCompactButton("📁 File", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 48, false, "Mở thư mục lưu trữ profile trên máy", Color.FromArgb(241, 245, 249));
-            _btnOpenFolder.Click += BtnOpenFolder_Click;
-
-            // Group 3: Proxy & Công cụ
-            _btnCheckProxy = CreateCompactButton("⚡ Check", Color.FromArgb(245, 158, 11), Color.White, 60, true, "Kiểm tra Proxy các profile được chọn", Color.FromArgb(217, 119, 6));
+            // Group 3: Công cụ quản lý
+            _btnCheckProxy = CreateCompactButton("⚡ Check Proxy", Color.FromArgb(245, 158, 11), Color.White, 96, true, "Kiểm tra Proxy các profile được chọn", Color.FromArgb(217, 119, 6));
             _btnCheckProxy.Click += BtnCheckProxy_Click;
 
             _btnCheckAllProxy = CreateCompactButton("Tất Cả", Color.FromArgb(255, 251, 235), Color.FromArgb(180, 83, 9), 50, false, "Kiểm tra Proxy toàn bộ danh sách profile", Color.FromArgb(254, 243, 199));
             _btnCheckAllProxy.Click += BtnCheckAllProxy_Click;
+
+            _btnQuickTag = CreateCompactButton("🏷️ Tag", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Gắn nhãn (tags) nhanh cho các profile đang chọn", Color.FromArgb(241, 245, 249));
+            _btnQuickTag.Click += (s, e) => ShowQuickTagDialog();
+
+            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 52, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
+            _btnDelete.Click += BtnDelete_Click;
+
+            _btnOpenFolder = CreateCompactButton("📁 Thư Mục", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 75, false, "Mở thư mục lưu trữ profile trên máy", Color.FromArgb(241, 245, 249));
+            _btnOpenFolder.Click += BtnOpenFolder_Click;
 
             _btnCopyProxy = CreateCompactButton("📋 Copy", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Sao chép Proxy vào Clipboard", Color.FromArgb(241, 245, 249));
             _btnCopyProxy.Click += BtnCopyProxy_Click;
@@ -236,7 +239,35 @@ namespace ADBLogin.UI
             _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 30, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
             _btnRefresh.Click += (s, e) => LoadData();
 
-            // Group 4: Bộ chọn phiên bản Chrome / Orbita
+            // Group 4: Bộ lọc nhanh GoLogin (Status & Tag Filter)
+            Label lblFilter = new Label { Text = "Lọc:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
+            _cboFilterStatus = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 112,
+                Height = 24,
+                Font = new Font("Segoe UI", 8.5F),
+                Cursor = Cursors.Hand
+            };
+            _cboFilterStatus.Items.Add("Tất cả trạng thái");
+            _cboFilterStatus.Items.Add("🟢 Đang mở");
+            _cboFilterStatus.Items.Add("⚪ Đã tắt");
+            _cboFilterStatus.SelectedIndex = 0;
+            _cboFilterStatus.SelectedIndexChanged += (s, e) => FilterData();
+
+            _cboFilterTag = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 115,
+                Height = 24,
+                Font = new Font("Segoe UI", 8.5F),
+                Cursor = Cursors.Hand
+            };
+            _cboFilterTag.Items.Add("Tất cả nhãn");
+            _cboFilterTag.SelectedIndex = 0;
+            _cboFilterTag.SelectedIndexChanged += (s, e) => FilterData();
+
+            // Group 5: Bộ chọn phiên bản Chrome / Orbita
             Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
             _cboBrowserVersion = new ComboBox
             {
@@ -250,7 +281,7 @@ namespace ADBLogin.UI
             PopulateBrowserVersions();
             _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
 
-            // Group 5: Chế độ Mobile & Lưới Phone Farm
+            // Group 6: Chế độ Mobile & Lưới Phone Farm
             _chkMobileMode = new CheckBox
             {
                 Text = "📱 Mobile",
@@ -284,22 +315,23 @@ namespace ADBLogin.UI
                 }
             };
 
+            pnlProfileBar.Controls.Add(_btnAdd);
+            pnlProfileBar.Controls.Add(_btnAutoCreate);
+            pnlProfileBar.Controls.Add(_btnBatchImport);
+            pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(_btnLaunch);
             pnlProfileBar.Controls.Add(_btnStop);
             pnlProfileBar.Controls.Add(_btnStopAll);
             pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(_btnAutoCreate);
-            pnlProfileBar.Controls.Add(_btnBatchImport);
-            pnlProfileBar.Controls.Add(_btnAdd);
-            pnlProfileBar.Controls.Add(_btnEdit);
+            pnlProfileBar.Controls.Add(_btnCheckProxy);
             pnlProfileBar.Controls.Add(_btnQuickTag);
             pnlProfileBar.Controls.Add(_btnDelete);
             pnlProfileBar.Controls.Add(_btnOpenFolder);
-            pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(_btnCheckProxy);
-            pnlProfileBar.Controls.Add(_btnCheckAllProxy);
-            pnlProfileBar.Controls.Add(_btnCopyProxy);
             pnlProfileBar.Controls.Add(_btnRefresh);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(lblFilter);
+            pnlProfileBar.Controls.Add(_cboFilterStatus);
+            pnlProfileBar.Controls.Add(_cboFilterTag);
             pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(lblBrowser);
             pnlProfileBar.Controls.Add(_cboBrowserVersion);
@@ -572,38 +604,90 @@ namespace ADBLogin.UI
             _grid.DefaultCellStyle.Padding = new Padding(4, 2, 4, 2);
             _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
 
-            _grid.Columns.Add("clId", "ID");
+            _grid.RowTemplate.Height = 36;
+
+            // 1. Cột Checkbox chọn nhiều
+            var chkCol = new DataGridViewCheckBoxColumn
+            {
+                Name = "clCheck",
+                HeaderText = "",
+                Width = 36,
+                Resizable = DataGridViewTriState.False
+            };
+            _grid.Columns.Add(chkCol);
+
+            // 2. Cột Nút Hành Động (Run / Stop GoLogin style)
+            var actCol = new DataGridViewButtonColumn
+            {
+                Name = "clAction",
+                HeaderText = "Hành Động",
+                Width = 92,
+                UseColumnTextForButtonValue = false,
+                Resizable = DataGridViewTriState.False
+            };
+            _grid.Columns.Add(actCol);
+
+            // 3. Tên Profile
             _grid.Columns.Add("clName", "Tên Profile / Email");
-            _grid.Columns.Add("clTags", "🏷️ Nhãn (Tags)");
-            _grid.Columns.Add("clRunningStatus", "Trạng Thái & Tác Vụ");
-            _grid.Columns.Add("clProxy", "Proxy");
-            _grid.Columns.Add("clStatusProxy", "Trạng Thái Proxy");
-            _grid.Columns.Add("clNote", "Ghi Chú");
-            _grid.Columns.Add("clPath", "Thư Mục Dữ Liệu");
-
-            _grid.Columns["clId"].Visible = false;
-
-            _grid.Columns["clName"].MinimumWidth = 180;
+            _grid.Columns["clName"].MinimumWidth = 190;
             _grid.Columns["clName"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 
-            _grid.Columns["clTags"].Width = 150;
-            _grid.Columns["clTags"].MinimumWidth = 120;
+            // 4. Trạng Thái
+            _grid.Columns.Add("clRunningStatus", "Trạng Thái");
+            _grid.Columns["clRunningStatus"].Width = 135;
+            _grid.Columns["clRunningStatus"].MinimumWidth = 110;
 
-            _grid.Columns["clRunningStatus"].Width = 190;
-            _grid.Columns["clRunningStatus"].MinimumWidth = 140;
-
-            _grid.Columns["clProxy"].Width = 150;
+            // 5. Proxy
+            _grid.Columns.Add("clProxy", "Proxy");
+            _grid.Columns["clProxy"].Width = 155;
             _grid.Columns["clProxy"].MinimumWidth = 110;
 
-            _grid.Columns["clStatusProxy"].Width = 210;
-            _grid.Columns["clStatusProxy"].MinimumWidth = 160;
+            // 6. Sức Khỏe Proxy
+            _grid.Columns.Add("clStatusProxy", "Sức Khỏe Proxy");
+            _grid.Columns["clStatusProxy"].Width = 175;
+            _grid.Columns["clStatusProxy"].MinimumWidth = 130;
 
-            _grid.Columns["clNote"].Width = 150;
-            _grid.Columns["clNote"].MinimumWidth = 100;
+            // 7. Nhãn (Tags)
+            _grid.Columns.Add("clTags", "🏷️ Nhãn (Tags)");
+            _grid.Columns["clTags"].Width = 135;
+            _grid.Columns["clTags"].MinimumWidth = 100;
 
+            // 8. Ghi chú
+            _grid.Columns.Add("clNote", "Ghi Chú");
+            _grid.Columns["clNote"].Width = 120;
+            _grid.Columns["clNote"].MinimumWidth = 80;
+
+            // 9. Nút Sửa Nhanh
+            var editCol = new DataGridViewButtonColumn
+            {
+                Name = "clQuickEdit",
+                HeaderText = "Sửa",
+                Text = "✏️",
+                UseColumnTextForButtonValue = true,
+                Width = 46,
+                Resizable = DataGridViewTriState.False
+            };
+            _grid.Columns.Add(editCol);
+
+            // Cột ẩn
+            _grid.Columns.Add("clId", "ID");
+            _grid.Columns["clId"].Visible = false;
+
+            _grid.Columns.Add("clPath", "Thư Mục Dữ Liệu");
             _grid.Columns["clPath"].Visible = false;
 
             _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) BtnLaunch_Click(null, null); };
+            _grid.CellContentClick += Grid_CellContentClick;
+            _grid.ColumnHeaderMouseClick += Grid_ColumnHeaderMouseClick;
+            _grid.CellValueChanged += Grid_CellValueChanged;
+            _grid.CurrentCellDirtyStateChanged += (s, e) =>
+            {
+                if (_grid.IsCurrentCellDirty && _grid.CurrentCell != null && _grid.CurrentCell.ColumnIndex == _grid.Columns["clCheck"].Index)
+                {
+                    _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+                }
+            };
+            _grid.SelectionChanged += (s, e) => UpdateSelectionUi();
             _grid.MouseDown += Grid_MouseDown;
             _grid.KeyDown += Grid_KeyDown;
             _grid.CellPainting += Grid_CellPainting;
@@ -734,13 +818,98 @@ namespace ADBLogin.UI
 
         private void Grid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            if (e.RowIndex < 0) return;
+            if (e.RowIndex < 0)
+            {
+                if (e.RowIndex == -1 && e.ColumnIndex == _grid.Columns["clCheck"].Index)
+                {
+                    e.PaintBackground(e.CellBounds, true);
+                    Rectangle chkRect = new Rectangle(e.CellBounds.X + 11, e.CellBounds.Y + 9, 14, 14);
+                    ControlPaint.DrawCheckBox(e.Graphics, chkRect, _allChecked ? ButtonState.Checked : ButtonState.Normal);
+                    e.Handled = true;
+                }
+                return;
+            }
 
             try
             {
                 string colName = _grid.Columns[e.ColumnIndex].Name;
 
-                if (colName == "clTags")
+                if (colName == "clAction")
+                {
+                    e.PaintBackground(e.CellBounds, true);
+                    string id = _grid.Rows[e.RowIndex].Cells["clId"].Value != null ? _grid.Rows[e.RowIndex].Cells["clId"].Value.ToString() : "";
+                    bool isRunning = _sessionManager.IsRunning(id);
+
+                    int btnWidth = 76;
+                    int btnHeight = 24;
+                    int btnX = e.CellBounds.X + (e.CellBounds.Width - btnWidth) / 2;
+                    int btnY = e.CellBounds.Y + (e.CellBounds.Height - btnHeight) / 2;
+                    Rectangle btnRect = new Rectangle(btnX, btnY, btnWidth, btnHeight);
+
+                    Color bg = isRunning ? Color.FromArgb(239, 68, 68) : Color.FromArgb(16, 185, 129);
+                    Color border = isRunning ? Color.FromArgb(220, 38, 38) : Color.FromArgb(5, 150, 105);
+                    string btnText = isRunning ? "⏹ Dừng" : "▶ Chạy";
+
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (GraphicsPath path = GetRoundedRectangle(btnRect, 5))
+                    {
+                        using (SolidBrush brush = new SolidBrush(bg))
+                        {
+                            e.Graphics.FillPath(brush, path);
+                        }
+                        using (Pen pen = new Pen(border, 1f))
+                        {
+                            e.Graphics.DrawPath(pen, path);
+                        }
+                    }
+
+                    using (Font font = new Font("Segoe UI", 8.5F, FontStyle.Bold))
+                    {
+                        TextRenderer.DrawText(
+                            e.Graphics,
+                            btnText,
+                            font,
+                            btnRect,
+                            Color.White,
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding
+                        );
+                    }
+                    e.Handled = true;
+                }
+                else if (colName == "clQuickEdit")
+                {
+                    e.PaintBackground(e.CellBounds, true);
+                    int btnSize = 24;
+                    int btnX = e.CellBounds.X + (e.CellBounds.Width - btnSize) / 2;
+                    int btnY = e.CellBounds.Y + (e.CellBounds.Height - btnSize) / 2;
+                    Rectangle btnRect = new Rectangle(btnX, btnY, btnSize, btnSize);
+
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (GraphicsPath path = GetRoundedRectangle(btnRect, 4))
+                    {
+                        using (SolidBrush brush = new SolidBrush(Color.FromArgb(241, 245, 249)))
+                        {
+                            e.Graphics.FillPath(brush, path);
+                        }
+                        using (Pen pen = new Pen(Color.FromArgb(203, 213, 225), 1f))
+                        {
+                            e.Graphics.DrawPath(pen, path);
+                        }
+                    }
+                    using (Font font = new Font("Segoe UI", 9F))
+                    {
+                        TextRenderer.DrawText(
+                            e.Graphics,
+                            "✏️",
+                            font,
+                            btnRect,
+                            Color.FromArgb(51, 65, 85),
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding
+                        );
+                    }
+                    e.Handled = true;
+                }
+                else if (colName == "clTags")
                 {
                     e.PaintBackground(e.CellBounds, true);
                     string val = e.Value != null ? e.Value.ToString() : "";
@@ -1044,6 +1213,7 @@ namespace ADBLogin.UI
             int runningCount = 0;
             for (int i = 0; i < _grid.Rows.Count; i++)
             {
+                if (_grid.Rows[i].Cells["clId"].Value == null) continue;
                 string id = _grid.Rows[i].Cells["clId"].Value.ToString();
                 bool isRunning = _sessionManager.IsRunning(id);
 
@@ -1067,6 +1237,235 @@ namespace ADBLogin.UI
             }
 
             _lblStatsRunning.Text = string.Format("Đang mở: {0}", runningCount);
+            if (_grid.Columns.Contains("clAction"))
+            {
+                _grid.InvalidateColumn(_grid.Columns["clAction"].Index);
+            }
+        }
+
+        private void Grid_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            string colName = _grid.Columns[e.ColumnIndex].Name;
+            if (_grid.Rows[e.RowIndex].Cells["clId"].Value == null) return;
+            string id = _grid.Rows[e.RowIndex].Cells["clId"].Value.ToString();
+            var profile = _accountManager.GetProfile(id);
+            if (profile == null) return;
+
+            if (colName == "clAction")
+            {
+                bool isRunning = _sessionManager.IsRunning(id);
+                if (isRunning)
+                {
+                    StopSingleProfile(id);
+                }
+                else
+                {
+                    LaunchSingleProfile(profile);
+                }
+            }
+            else if (colName == "clQuickEdit")
+            {
+                OpenEditProfileDialog(profile);
+            }
+            else if (colName == "clStatusProxy" || colName == "clProxy")
+            {
+                CheckSingleProxy(e.RowIndex, profile);
+            }
+            else if (colName == "clCheck")
+            {
+                _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+                UpdateSelectionUi();
+            }
+        }
+
+        private void Grid_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (_grid.Columns.Contains("clCheck") && e.ColumnIndex == _grid.Columns["clCheck"].Index)
+            {
+                _allChecked = !_allChecked;
+                for (int i = 0; i < _grid.Rows.Count; i++)
+                {
+                    _grid.Rows[i].Cells["clCheck"].Value = _allChecked;
+                }
+                _grid.InvalidateColumn(_grid.Columns["clCheck"].Index);
+                UpdateSelectionUi();
+            }
+        }
+
+        private void Grid_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0 && _grid.Columns.Contains("clCheck") && e.ColumnIndex == _grid.Columns["clCheck"].Index)
+            {
+                UpdateSelectionUi();
+            }
+        }
+
+        private void UpdateSelectionUi()
+        {
+            int checkedCount = 0;
+            for (int i = 0; i < _grid.Rows.Count; i++)
+            {
+                var val = _grid.Rows[i].Cells["clCheck"].Value;
+                if (val != null && (bool)val) checkedCount++;
+            }
+
+            if (checkedCount == 0)
+            {
+                checkedCount = _grid.SelectedRows.Count;
+            }
+
+            if (_lblStatsSelected != null)
+            {
+                _lblStatsSelected.Text = string.Format("Đã chọn: {0}", checkedCount);
+            }
+
+            if (_btnLaunch != null)
+            {
+                _btnLaunch.Text = checkedCount > 1 ? string.Format("▶ Chạy ({0})", checkedCount) : "▶ Chạy";
+            }
+            if (_btnStop != null)
+            {
+                _btnStop.Text = checkedCount > 1 ? string.Format("⏹ Dừng ({0})", checkedCount) : "⏹ Dừng";
+            }
+            if (_btnDelete != null)
+            {
+                _btnDelete.Text = checkedCount > 1 ? string.Format("🗑️ Xóa ({0})", checkedCount) : "🗑️ Xóa";
+            }
+            if (_btnCheckProxy != null)
+            {
+                _btnCheckProxy.Text = checkedCount > 1 ? string.Format("⚡ Check ({0})", checkedCount) : "⚡ Check Proxy";
+            }
+        }
+
+        private void LaunchSingleProfile(UserProfile profile)
+        {
+            if (profile == null) return;
+
+            ThreadPool.QueueUserWorkItem((state) =>
+            {
+                try
+                {
+                    this.Invoke((MethodInvoker)(() =>
+                    {
+                        _lblStatus.Text = string.Format("Đang mở trình duyệt [{0}]...", profile.ProfileName);
+                    }));
+
+                    _launcherService.LaunchBrowser(profile, null, 0, 1, 1, _chkMobileMode != null && _chkMobileMode.Checked);
+
+                    this.Invoke((MethodInvoker)(() =>
+                    {
+                        _lblStatus.Text = string.Format("Đã mở trình duyệt [{0}] thành công!", profile.ProfileName);
+                        UpdateRunningStatus();
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    this.Invoke((MethodInvoker)(() =>
+                    {
+                        _lblStatus.Text = string.Format("Lỗi mở [{0}]: {1}", profile.ProfileName, ex.Message);
+                    }));
+                }
+            });
+        }
+
+        private void StopSingleProfile(string profileId)
+        {
+            if (string.IsNullOrEmpty(profileId)) return;
+            if (_sessionManager.CloseSession(profileId))
+            {
+                UpdateRunningStatus();
+                _lblStatus.Text = "Đã tắt trình duyệt!";
+            }
+        }
+
+        private void CheckSingleProxy(int rowIndex, UserProfile profile)
+        {
+            if (profile == null) return;
+            if (string.IsNullOrEmpty(profile.Proxy))
+            {
+                _grid.Rows[rowIndex].Cells["clStatusProxy"].Value = "🟢 Direct";
+                _grid.InvalidateCell(_grid.Rows[rowIndex].Cells["clStatusProxy"]);
+                return;
+            }
+
+            _grid.Rows[rowIndex].Cells["clStatusProxy"].Value = "⏳ Đang test...";
+            _grid.InvalidateCell(_grid.Rows[rowIndex].Cells["clStatusProxy"]);
+
+            ThreadPool.QueueUserWorkItem((state) =>
+            {
+                var result = _proxyChecker.CheckProxyString(profile.Proxy);
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    if (rowIndex < _grid.Rows.Count)
+                    {
+                        _grid.Rows[rowIndex].Cells["clStatusProxy"].Value = result.ToString();
+                        _grid.InvalidateCell(_grid.Rows[rowIndex].Cells["clStatusProxy"]);
+                    }
+                }));
+            });
+        }
+
+        private void OpenEditProfileDialog(UserProfile profile)
+        {
+            if (profile == null) return;
+            using (var form = new ProfileEditForm(profile))
+            {
+                if (form.ShowDialog(this) == DialogResult.OK)
+                {
+                    _accountManager.AddOrUpdateProfile(form.Profile);
+
+                    // Đồng bộ ngay lập tức tên và cấu hình mới vào tệp Preferences & Local State của Profile trên ổ đĩa
+                    try
+                    {
+                        string profileDir = form.Profile.BrowserPath;
+                        if (string.IsNullOrEmpty(profileDir) || !Directory.Exists(profileDir))
+                        {
+                            profileDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Files", "Profiles", form.Profile.ProfileId);
+                        }
+                        if (Directory.Exists(profileDir))
+                        {
+                            var proxy = !string.IsNullOrEmpty(form.Profile.Proxy) ? ProxySettings.Parse(form.Profile.Proxy) : null;
+                            new ChromiumPreferenceService().UpdatePreferences(profileDir, proxy, form.Profile.UserAgent, form.Profile.ProfileName);
+                        }
+                    }
+                    catch { }
+
+                    LoadData();
+                    _lblStatus.Text = string.Format("Đã cập nhật profile [{0}]!", profile.ProfileName);
+                }
+            }
+        }
+
+        private void PopulateFilterTags()
+        {
+            if (_cboFilterTag == null) return;
+            string current = _cboFilterTag.SelectedItem != null ? _cboFilterTag.SelectedItem.ToString() : "Tất cả nhãn";
+            _cboFilterTag.Items.Clear();
+            _cboFilterTag.Items.Add("Tất cả nhãn");
+
+            var set = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in _accountManager.Profiles)
+            {
+                if (!string.IsNullOrEmpty(p.Tags))
+                {
+                    var parts = p.Tags.Split(new char[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var part in parts)
+                    {
+                        string t = part.Trim();
+                        if (!string.IsNullOrEmpty(t)) set.Add(t);
+                    }
+                }
+            }
+
+            foreach (var tag in set)
+            {
+                _cboFilterTag.Items.Add("#" + tag);
+            }
+
+            int idx = _cboFilterTag.Items.IndexOf(current);
+            _cboFilterTag.SelectedIndex = idx >= 0 ? idx : 0;
         }
 
         private void PopulateBrowserVersions()
@@ -1586,20 +1985,37 @@ namespace ADBLogin.UI
         private void LoadData()
         {
             _accountManager.LoadProfiles();
+            PopulateFilterTags();
             FilterData();
             UpdateRunningStatus();
+            UpdateSelectionUi();
         }
 
         private void FilterData()
         {
             _grid.Rows.Clear();
             string keyword = _txtSearch.Text.Trim().ToLower();
+            string statusFilter = _cboFilterStatus != null && _cboFilterStatus.SelectedIndex > 0 
+                ? _cboFilterStatus.SelectedItem.ToString() : "Tất cả trạng thái";
+            string tagFilter = _cboFilterTag != null && _cboFilterTag.SelectedIndex > 0 
+                ? _cboFilterTag.SelectedItem.ToString() : "Tất cả nhãn";
 
             int matchCount = 0;
             int proxyCount = 0;
 
             foreach (var p in _accountManager.Profiles)
             {
+                bool isRunning = _sessionManager.IsRunning(p.ProfileId);
+                if (statusFilter == "🟢 Đang mở" && !isRunning) continue;
+                if (statusFilter == "⚪ Đã tắt" && isRunning) continue;
+
+                if (tagFilter != "Tất cả nhãn" && !string.IsNullOrEmpty(tagFilter))
+                {
+                    string cleanTag = tagFilter.StartsWith("#") ? tagFilter.Substring(1) : tagFilter;
+                    string pTags = p.Tags ?? "";
+                    if (pTags.IndexOf(cleanTag, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                }
+
                 if (!string.IsNullOrEmpty(keyword))
                 {
                     bool matchName = (p.ProfileName ?? "").ToLower().Contains(keyword);
@@ -1614,7 +2030,7 @@ namespace ADBLogin.UI
                     }
                 }
 
-                string displayProxy = string.IsNullOrEmpty(p.Proxy) ? "Direct (Mạng gốc)" : p.Proxy;
+                string displayProxy = string.IsNullOrEmpty(p.Proxy) ? "⚪ Không Proxy" : p.Proxy;
                 if (!string.IsNullOrEmpty(p.Proxy)) proxyCount++;
 
                 string proxyStatus = string.IsNullOrEmpty(p.Proxy) ? "🟢 Direct" : "Chưa kiểm tra";
@@ -1622,21 +2038,24 @@ namespace ADBLogin.UI
                 string displayTags = string.IsNullOrEmpty(p.Tags) ? "" : p.Tags;
 
                 string runningStatus = "⚪ ĐÃ TẮT";
-                if (_sessionManager.IsRunning(p.ProfileId))
+                if (isRunning)
                 {
                     string activeTask = _sessionManager.GetRunningTask(p.ProfileId);
                     runningStatus = !string.IsNullOrEmpty(activeTask) ? ("▶ " + activeTask) : "🟢 ĐANG MỞ";
                 }
 
                 _grid.Rows.Add(
-                    p.ProfileId,
-                    p.ProfileName,
-                    displayTags,
-                    runningStatus,
-                    displayProxy,
-                    proxyStatus,
-                    p.Notes,
-                    displayPath
+                    false,              // clCheck
+                    "▶ Chạy",          // clAction
+                    p.ProfileName,      // clName
+                    runningStatus,      // clRunningStatus
+                    displayProxy,       // clProxy
+                    proxyStatus,        // clStatusProxy
+                    displayTags,        // clTags
+                    p.Notes,            // clNote
+                    "✏️",               // clQuickEdit
+                    p.ProfileId,        // clId
+                    displayPath         // clPath
                 );
 
                 matchCount++;
@@ -1645,16 +2064,44 @@ namespace ADBLogin.UI
             _lblStatsTotal.Text = string.Format("Tổng: {0}", _accountManager.Profiles.Count);
             _lblStatsProxy.Text = string.Format("Proxy: {0}", proxyCount);
             _lblStatus.Text = string.Format("Hiển thị {0} / {1} profile phù hợp", matchCount, _accountManager.Profiles.Count);
+            UpdateSelectionUi();
         }
 
         private List<UserProfile> GetSelectedProfiles()
         {
             var list = new List<UserProfile>();
+            var checkedIds = new HashSet<string>();
+
+            for (int i = 0; i < _grid.Rows.Count; i++)
+            {
+                var val = _grid.Rows[i].Cells["clCheck"].Value;
+                if (val != null && (bool)val)
+                {
+                    if (_grid.Rows[i].Cells["clId"].Value != null)
+                    {
+                        checkedIds.Add(_grid.Rows[i].Cells["clId"].Value.ToString());
+                    }
+                }
+            }
+
+            if (checkedIds.Count > 0)
+            {
+                foreach (var id in checkedIds)
+                {
+                    var p = _accountManager.GetProfile(id);
+                    if (p != null) list.Add(p);
+                }
+                return list;
+            }
+
             foreach (DataGridViewRow row in _grid.SelectedRows)
             {
-                string id = row.Cells["clId"].Value.ToString();
-                var p = _accountManager.GetProfile(id);
-                if (p != null) list.Add(p);
+                if (row.Cells["clId"].Value != null)
+                {
+                    string id = row.Cells["clId"].Value.ToString();
+                    var p = _accountManager.GetProfile(id);
+                    if (p != null && !list.Contains(p)) list.Add(p);
+                }
             }
             return list;
         }
@@ -1885,33 +2332,7 @@ namespace ADBLogin.UI
                 return;
             }
 
-            var profile = selected[0];
-            using (var form = new ProfileEditForm(profile))
-            {
-                if (form.ShowDialog(this) == DialogResult.OK)
-                {
-                    _accountManager.AddOrUpdateProfile(form.Profile);
-
-                    // Đồng bộ ngay lập tức tên và cấu hình mới vào tệp Preferences & Local State của Profile trên ổ đĩa
-                    try
-                    {
-                        string profileDir = form.Profile.BrowserPath;
-                        if (string.IsNullOrEmpty(profileDir) || !Directory.Exists(profileDir))
-                        {
-                            profileDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Files", "Profiles", form.Profile.ProfileId);
-                        }
-                        if (Directory.Exists(profileDir))
-                        {
-                            var proxy = !string.IsNullOrEmpty(form.Profile.Proxy) ? ProxySettings.Parse(form.Profile.Proxy) : null;
-                            new ChromiumPreferenceService().UpdatePreferences(profileDir, proxy, form.Profile.UserAgent, form.Profile.ProfileName);
-                        }
-                    }
-                    catch { }
-
-                    LoadData();
-                    _lblStatus.Text = string.Format("Đã cập nhật profile [{0}]!", profile.ProfileName);
-                }
-            }
+            OpenEditProfileDialog(selected[0]);
         }
 
         private void BtnDelete_Click(object sender, EventArgs e)
