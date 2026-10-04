@@ -160,6 +160,55 @@ namespace ADBLogin.Core.Services
         }
 
         /// <summary>
+        /// Tự động tải danh sách file cấu hình OpenVPN của NordVPN từ NordCDN
+        /// </summary>
+        public async Task<int> DownloadNordVpnConfigsAsync(string targetDir, int limit = 20)
+        {
+            if (string.IsNullOrEmpty(targetDir)) return 0;
+            if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
+
+            Log("🌐 Đang truy vấn danh sách máy chủ tối ưu từ NordVPN API...");
+            int downloaded = 0;
+            try
+            {
+                using (var client = new WebClient())
+                {
+                    client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
+                    string apiUrl = string.Format("https://api.nordvpn.com/v1/servers/recommendations?limit={0}", limit);
+                    string json = await client.DownloadStringTaskAsync(apiUrl);
+                    var arr = JArray.Parse(json);
+
+                    foreach (var item in arr)
+                    {
+                        string hostname = (string)item["hostname"];
+                        if (string.IsNullOrEmpty(hostname)) continue;
+
+                        string ovpnUrl = string.Format("https://downloads.nordcdn.com/configs/files/ovpn_udp/servers/{0}.udp.ovpn", hostname);
+                        string destFile = Path.Combine(targetDir, string.Format("{0}.ovpn", hostname));
+
+                        try
+                        {
+                            await client.DownloadFileTaskAsync(ovpnUrl, destFile);
+                            downloaded++;
+                            Log(string.Format("✅ Đã tải cấu hình server NordVPN: {0}", hostname));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(string.Format("Lỗi tải {0}: {1}", hostname, ex.Message));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Lỗi kết nối NordVPN API: " + ex.Message);
+            }
+
+            Log(string.Format("🎉 Hoàn tất tải {0} file cấu hình server NordVPN vào thư mục: {1}", downloaded, targetDir));
+            return downloaded;
+        }
+
+        /// <summary>
         /// Quét tất cả file .ovpn trong thư mục do người dùng cung cấp
         /// </summary>
         public List<KeyValuePair<string, string>> ScanOvpnFiles(string folder)

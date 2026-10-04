@@ -476,18 +476,48 @@ namespace ADBLogin.UI
             _lblOvpnCount = new Label
             {
                 Text = "Chưa nạp thư mục cấu hình",
-                Location = new Point(14, 74),
+                Location = new Point(14, 70),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(100, 116, 139),
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Italic)
             };
 
+            Button btnDownloadNord = CreateButton("⚡ Tự Động Tải 20 Server NordVPN", Color.FromArgb(219, 234, 254), Color.FromArgb(30, 64, 175), 343);
+            btnDownloadNord.Location = new Point(14, 94);
+            btnDownloadNord.Height = 28;
+            btnDownloadNord.Click += async (s, e) =>
+            {
+                btnDownloadNord.Enabled = false;
+                btnDownloadNord.Text = "⏳ Đang tải server NordVPN...";
+                try
+                {
+                    string nordDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "openvpn", "nordvpn_configs");
+                    int downloaded = await _openVpnService.DownloadNordVpnConfigsAsync(nordDir, 20);
+                    _txtOvpnDir.Text = nordDir;
+                    _openVpnService.Config.OvpnDirectory = nordDir;
+                    _openVpnService.SaveConfig();
+                    _discoveredOvpn = _openVpnService.ScanOvpnFiles(nordDir);
+                    if (_discoveredOvpn.Count > 0)
+                    {
+                        _lblOvpnCount.Text = string.Format("✅ Tìm thấy {0} file cấu hình server", _discoveredOvpn.Count);
+                        _lblOvpnCount.ForeColor = Color.FromArgb(16, 185, 129);
+                    }
+                    RebuildOvpnPorts();
+                    MessageBox.Show(string.Format("Đã tải thành công {0} file cấu hình server NordVPN tối ưu!", downloaded), "NordVPN Ready", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                finally
+                {
+                    btnDownloadNord.Enabled = true;
+                    btnDownloadNord.Text = "⚡ Tự Động Tải 20 Server NordVPN";
+                }
+            };
+
             Label lblHintOvpn = new Label
             {
-                Text = "💡 Mẹo: Hỗ trợ 100% các file .ovpn của NordVPN và HMA (giải nén vào 1 thư mục).",
-                Location = new Point(14, 100),
-                Size = new Size(345, 45),
-                ForeColor = Color.FromArgb(71, 85, 105),
+                Text = "💡 Hỗ trợ đầy đủ .ovpn từ NordVPN, HMA, Surfshark, v.v.",
+                Location = new Point(14, 130),
+                Size = new Size(345, 20),
+                ForeColor = Color.FromArgb(100, 116, 139),
                 Font = new Font("Segoe UI", 7.5F)
             };
 
@@ -495,6 +525,7 @@ namespace ADBLogin.UI
             grpOvpn.Controls.Add(_txtOvpnDir);
             grpOvpn.Controls.Add(_btnBrowseOvpn);
             grpOvpn.Controls.Add(_lblOvpnCount);
+            grpOvpn.Controls.Add(btnDownloadNord);
             grpOvpn.Controls.Add(lblHintOvpn);
 
             // Group 3: Thiết lập dải cổng
