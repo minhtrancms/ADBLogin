@@ -158,7 +158,7 @@ namespace ADBLogin.UI
                 searchBoxPanel.Location = new Point(headerPanel.ClientSize.Width - searchBoxPanel.Width - 14, 9);
             };
 
-            // ================= 2. SMART COMMAND BAR (THANH ĐIỀU KHIỂN THÔNG MINH GỌN GÀNG) =================
+            // ================= 2. SMART COMMAND BAR (DÒNG 1: CÁC NÚT HÀNH ĐỘNG & MENU THÔNG MINH) =================
             Panel pnlProfileBar = new Panel
             {
                 Dock = DockStyle.Top,
@@ -200,18 +200,9 @@ namespace ADBLogin.UI
             _btnStop.Click += BtnStop_Click;
 
             // 4. SMART BUTTON: ĐIỀU KHIỂN & VẬN HÀNH
-            _btnRunOptions = CreateCompactButton("⚙️ Điều Khiển ▾", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 114, false, "Tắt hết trình duyệt, chế độ mobile, chọn cấu hình lưới", Color.FromArgb(226, 232, 240));
+            _btnRunOptions = CreateCompactButton("⚙️ Điều Khiển ▾", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 114, false, "Tắt hết trình duyệt đang mở", Color.FromArgb(226, 232, 240));
             var mnuRunOptions = new ContextMenuStrip();
             AddMenuItem(mnuRunOptions, "⏹  Tắt Tất Cả Trình Duyệt Đang Chạy", BtnStopAll_Click, Color.FromArgb(220, 38, 38), true);
-            AddMenuSeparator(mnuRunOptions);
-            AddMenuItem(mnuRunOptions, "📱  Chế Độ Mobile Farm (Scale 70%, 6 Cột)", (s, e) =>
-            {
-                _chkMobileMode.Checked = !_chkMobileMode.Checked;
-            });
-            AddMenuItem(mnuRunOptions, "📐  Lưới: 1 Hàng x 4 Cột (Màn nhỏ)", (s, e) => { _numRows.Value = 1; _numCols.Value = 4; });
-            AddMenuItem(mnuRunOptions, "📐  Lưới: 1 Hàng x 6 Cột (Chuẩn Mobile Farm)", (s, e) => { _numRows.Value = 1; _numCols.Value = 6; });
-            AddMenuItem(mnuRunOptions, "📐  Lưới: 2 Hàng x 4 Cột (Mặc định)", (s, e) => { _numRows.Value = 2; _numCols.Value = 4; });
-            AddMenuItem(mnuRunOptions, "📐  Lưới: 2 Hàng x 6 Cột (Màn lớn 2K/4K)", (s, e) => { _numRows.Value = 2; _numCols.Value = 6; });
             AttachSmartDropdown(_btnRunOptions, mnuRunOptions);
 
             // 5. SMART BUTTON: PROXY STUDIO
@@ -318,12 +309,38 @@ namespace ADBLogin.UI
             AddMenuItem(mnuTools, "🗑️  Xóa Vĩnh Viễn Profile Đang Chọn (Delete)", BtnDelete_Click, Color.FromArgb(225, 29, 72), true);
             AttachSmartDropdown(_btnToolsMenu, mnuTools);
 
-            // BỘ LỌC & CÀI ĐẶT NHANH (BÊN PHẢI COMMAND BAR)
+            pnlProfileBar.Controls.Add(_btnProfileMenu);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(_btnLaunch);
+            pnlProfileBar.Controls.Add(_btnStop);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(_btnRunOptions);
+            pnlProfileBar.Controls.Add(_btnProxyMenu);
+            pnlProfileBar.Controls.Add(_btnMmoMenu);
+            pnlProfileBar.Controls.Add(_btnToolsMenu);
+
+            LayoutCompactToolbar(pnlProfileBar);
+            pnlProfileBar.Resize += (s, e) => LayoutCompactToolbar(pnlProfileBar);
+
+            // ================= 3. SUB TOOLBAR (DÒNG 2: BỘ LỌC, ORBITA, MOBILE, LƯỚI, RELOAD) =================
+            Panel pnlFilterBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                BackColor = Color.FromArgb(248, 250, 252),
+                Padding = new Padding(8, 3, 8, 3)
+            };
+            pnlFilterBar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240)), 0, pnlFilterBar.Height - 1, pnlFilterBar.Width, pnlFilterBar.Height - 1);
+            };
+
+            // 1. Bộ lọc Status & Tag
             Label lblFilter = new Label { Text = "Lọc:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
             _cboFilterStatus = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 112,
+                Width = 115,
                 Height = 24,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -337,7 +354,7 @@ namespace ADBLogin.UI
             _cboFilterTag = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 110,
+                Width = 120,
                 Height = 24,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -346,11 +363,12 @@ namespace ADBLogin.UI
             _cboFilterTag.SelectedIndex = 0;
             _cboFilterTag.SelectedIndexChanged += (s, e) => FilterData();
 
-            Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
+            // 2. Lõi Orbita / Chrome
+            Label lblBrowser = new Label { Text = "🌐 Orbita:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
             _cboBrowserVersion = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 120,
+                Width = 135,
                 Height = 24,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -359,6 +377,7 @@ namespace ADBLogin.UI
             PopulateBrowserVersions();
             _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
 
+            // 3. Mobile Mode & Lưới Phone Farm
             _chkMobileMode = new CheckBox
             {
                 Text = "📱 Mobile",
@@ -370,9 +389,9 @@ namespace ADBLogin.UI
             };
 
             Label lblGridConfig = new Label { Text = "Lưới:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
-            _numRows = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 32, Height = 22, Font = new Font("Segoe UI", 8.5F) };
+            _numRows = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 34, Height = 22, Font = new Font("Segoe UI", 8.5F) };
             Label lblRowUnit = new Label { Text = "x", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
-            _numCols = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 4, Width = 32, Height = 22, Font = new Font("Segoe UI", 8.5F) };
+            _numCols = new NumericUpDown { Minimum = 1, Maximum = 12, Value = 4, Width = 34, Height = 22, Font = new Font("Segoe UI", 8.5F) };
 
             toolTip.SetToolTip(_chkMobileMode, "Chế độ giao diện điện thoại (Scale 70%, tự động xếp 1 hàng 6 máy)");
             toolTip.SetToolTip(_numRows, "Số hàng (Rows)");
@@ -392,35 +411,27 @@ namespace ADBLogin.UI
                 }
             };
 
-            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 32, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
+            // 4. Reload / Refresh
+            _btnRefresh = CreateCompactButton("🔄 Làm Mới", Color.FromArgb(255, 255, 255), Color.FromArgb(51, 65, 85), 78, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
             _btnRefresh.Click += (s, e) => LoadData();
 
-            pnlProfileBar.Controls.Add(_btnProfileMenu);
-            pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(_btnLaunch);
-            pnlProfileBar.Controls.Add(_btnStop);
-            pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(_btnRunOptions);
-            pnlProfileBar.Controls.Add(_btnProxyMenu);
-            pnlProfileBar.Controls.Add(_btnMmoMenu);
-            pnlProfileBar.Controls.Add(_btnToolsMenu);
-            pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(lblFilter);
-            pnlProfileBar.Controls.Add(_cboFilterStatus);
-            pnlProfileBar.Controls.Add(_cboFilterTag);
-            pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(lblBrowser);
-            pnlProfileBar.Controls.Add(_cboBrowserVersion);
-            pnlProfileBar.Controls.Add(_chkMobileMode);
-            pnlProfileBar.Controls.Add(lblGridConfig);
-            pnlProfileBar.Controls.Add(_numRows);
-            pnlProfileBar.Controls.Add(lblRowUnit);
-            pnlProfileBar.Controls.Add(_numCols);
-            pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(_btnRefresh);
+            pnlFilterBar.Controls.Add(lblFilter);
+            pnlFilterBar.Controls.Add(_cboFilterStatus);
+            pnlFilterBar.Controls.Add(_cboFilterTag);
+            pnlFilterBar.Controls.Add(CreateDivider());
+            pnlFilterBar.Controls.Add(lblBrowser);
+            pnlFilterBar.Controls.Add(_cboBrowserVersion);
+            pnlFilterBar.Controls.Add(CreateDivider());
+            pnlFilterBar.Controls.Add(_chkMobileMode);
+            pnlFilterBar.Controls.Add(lblGridConfig);
+            pnlFilterBar.Controls.Add(_numRows);
+            pnlFilterBar.Controls.Add(lblRowUnit);
+            pnlFilterBar.Controls.Add(_numCols);
+            pnlFilterBar.Controls.Add(CreateDivider());
+            pnlFilterBar.Controls.Add(_btnRefresh);
 
-            LayoutCompactToolbar(pnlProfileBar);
-            pnlProfileBar.Resize += (s, e) => LayoutCompactToolbar(pnlProfileBar);
+            LayoutCompactToolbar(pnlFilterBar);
+            pnlFilterBar.Resize += (s, e) => LayoutCompactToolbar(pnlFilterBar);
 
             // ================= 4. DATAGRIDVIEW (TEXT NHỎ GỌN, DỄ NHÌN) =================
             _grid = new DataGridView
@@ -488,35 +499,35 @@ namespace ADBLogin.UI
             };
             _grid.Columns.Add(actCol);
 
-            // 3. Tên Profile
+            // 3. Tên Profile (Đã giảm kích thước theo yêu cầu)
             _grid.Columns.Add("clName", "Tên Profile / Email");
-            _grid.Columns["clName"].MinimumWidth = 190;
-            _grid.Columns["clName"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            _grid.Columns["clName"].Width = 165;
+            _grid.Columns["clName"].MinimumWidth = 130;
 
             // 4. Trạng Thái
             _grid.Columns.Add("clRunningStatus", "Trạng Thái");
-            _grid.Columns["clRunningStatus"].Width = 135;
-            _grid.Columns["clRunningStatus"].MinimumWidth = 110;
+            _grid.Columns["clRunningStatus"].Width = 120;
+            _grid.Columns["clRunningStatus"].MinimumWidth = 95;
 
             // 5. Proxy
             _grid.Columns.Add("clProxy", "Proxy");
-            _grid.Columns["clProxy"].Width = 155;
+            _grid.Columns["clProxy"].Width = 145;
             _grid.Columns["clProxy"].MinimumWidth = 110;
 
             // 6. Sức Khỏe Proxy
             _grid.Columns.Add("clStatusProxy", "Sức Khỏe Proxy");
-            _grid.Columns["clStatusProxy"].Width = 175;
-            _grid.Columns["clStatusProxy"].MinimumWidth = 130;
+            _grid.Columns["clStatusProxy"].Width = 150;
+            _grid.Columns["clStatusProxy"].MinimumWidth = 120;
 
-            // 7. Nhãn (Tags)
+            // 7. Nhãn (Tags) - Đã tăng kích thước
             _grid.Columns.Add("clTags", "🏷️ Nhãn (Tags)");
-            _grid.Columns["clTags"].Width = 135;
-            _grid.Columns["clTags"].MinimumWidth = 100;
+            _grid.Columns["clTags"].Width = 200;
+            _grid.Columns["clTags"].MinimumWidth = 140;
 
-            // 8. Ghi chú
+            // 8. Ghi chú - Đã tăng kích thước & tự động mở rộng Fill
             _grid.Columns.Add("clNote", "Ghi Chú");
-            _grid.Columns["clNote"].Width = 120;
-            _grid.Columns["clNote"].MinimumWidth = 80;
+            _grid.Columns["clNote"].MinimumWidth = 180;
+            _grid.Columns["clNote"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 
             // 9. Nút Sửa Nhanh
             var editCol = new DataGridViewButtonColumn
@@ -567,6 +578,7 @@ namespace ADBLogin.UI
             };
 
             this.Controls.Add(_grid);
+            this.Controls.Add(pnlFilterBar);
             this.Controls.Add(pnlProfileBar);
             this.Controls.Add(headerPanel);
             this.Controls.Add(_lblStatus);
@@ -678,7 +690,7 @@ namespace ADBLogin.UI
 
         private static ContextMenuStrip _activeSmartMenu = null;
 
-        private void AttachSmartDropdown(Button btn, ContextMenuStrip menu, bool openOnHover = true)
+        private void AttachSmartDropdown(Button btn, ContextMenuStrip menu)
         {
             menu.Renderer = new ModernMenuRenderer();
             menu.Font = new Font("Segoe UI", 9F);
@@ -709,47 +721,6 @@ namespace ADBLogin.UI
                     menu.Show(btn, new Point(0, btn.Height + 1));
                 }
             };
-
-            if (openOnHover)
-            {
-                System.Windows.Forms.Timer hoverTimer = new System.Windows.Forms.Timer { Interval = 160 };
-                hoverTimer.Tick += (s, e) =>
-                {
-                    hoverTimer.Stop();
-                    if (!this.IsDisposed && btn.ClientRectangle.Contains(btn.PointToClient(Cursor.Position)))
-                    {
-                        if (_activeSmartMenu != null && _activeSmartMenu != menu && _activeSmartMenu.Visible)
-                        {
-                            _activeSmartMenu.Close();
-                        }
-                        if (!menu.Visible)
-                        {
-                            _activeSmartMenu = menu;
-                            menu.Show(btn, new Point(0, btn.Height + 1));
-                        }
-                    }
-                };
-
-                btn.MouseEnter += (s, e) =>
-                {
-                    if (_activeSmartMenu != null && _activeSmartMenu.Visible && _activeSmartMenu != menu)
-                    {
-                        _activeSmartMenu.Close();
-                        _activeSmartMenu = menu;
-                        menu.Show(btn, new Point(0, btn.Height + 1));
-                    }
-                    else
-                    {
-                        hoverTimer.Stop();
-                        hoverTimer.Start();
-                    }
-                };
-
-                btn.MouseLeave += (s, e) =>
-                {
-                    hoverTimer.Stop();
-                };
-            }
         }
 
         private ToolStripMenuItem AddMenuItem(ContextMenuStrip menu, string text, EventHandler onClick, Color? foreColor = null, bool isBold = false)
