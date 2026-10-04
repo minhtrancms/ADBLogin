@@ -582,7 +582,7 @@ namespace ADBLogin.UI
             };
 
             Label lblP1 = new Label { Text = "Cổng Bắt Đầu:", Location = new Point(14, 24), AutoSize = true, Font = new Font("Segoe UI", 8F) };
-            _numOvpnStartPort = new NumericUpDown { Location = new Point(14, 42), Width = 110, Minimum = 1024, Maximum = 65530, Value = 10001, Font = new Font("Segoe UI", 9F) };
+            _numOvpnStartPort = new NumericUpDown { Location = new Point(14, 42), Width = 110, Minimum = 1024, Maximum = 65530, Value = 20001, Font = new Font("Segoe UI", 9F) };
 
             Label lblP2 = new Label { Text = "Số Cổng Mở:", Location = new Point(140, 24), AutoSize = true, Font = new Font("Segoe UI", 8F) };
             _numOvpnPortCount = new NumericUpDown { Location = new Point(140, 42), Width = 80, Minimum = 1, Maximum = 50, Value = 5, Font = new Font("Segoe UI", 9F) };
@@ -956,6 +956,18 @@ namespace ADBLogin.UI
             _txtUsername.Text = _openVpnService.Config.Username ?? string.Empty;
             _txtPassword.Text = _openVpnService.Config.Password ?? string.Empty;
             _txtOvpnDir.Text = _openVpnService.Config.OvpnDirectory ?? string.Empty;
+            if (_openVpnService.Config.StartPort >= 1024)
+            {
+                _numOvpnStartPort.Value = Math.Min(_numOvpnStartPort.Maximum, Math.Max(_numOvpnStartPort.Minimum, _openVpnService.Config.StartPort));
+            }
+            else
+            {
+                _numOvpnStartPort.Value = 20001;
+            }
+            if (_openVpnService.Config.PortCount > 0)
+            {
+                _numOvpnPortCount.Value = Math.Min(_numOvpnPortCount.Maximum, Math.Max(_numOvpnPortCount.Minimum, _openVpnService.Config.PortCount));
+            }
 
             CheckOpenVpnEngine();
             if (!string.IsNullOrEmpty(_txtOvpnDir.Text) && Directory.Exists(_txtOvpnDir.Text))

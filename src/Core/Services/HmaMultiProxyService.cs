@@ -404,10 +404,17 @@ namespace ADBLogin.Core.Services
             catch (Exception ex)
             {
                 item.Status = HmaTunnelStatus.Error;
-                item.StatusText = "Lỗi cổng " + port;
+                item.StatusText = "Cổng bị trùng";
                 item.LastError = ex.Message;
                 NotifyStatusChanged(item);
-                Log(string.Format("❌ Lỗi mở cổng {0}: {1}", port, ex.Message));
+                if (ex.Message.Contains("Only one usage of each socket address") || ex is SocketException)
+                {
+                    Log(string.Format("❌ Lỗi mở cổng {0}: Cổng này đang bị chiếm dụng (ví dụ: do Cloudflare WARP đang chạy trên Tab 1). Vui lòng đổi sang dải cổng 20001 hoặc dừng WARP trước khi bật OpenVPN.", port));
+                }
+                else
+                {
+                    Log(string.Format("❌ Lỗi mở cổng {0}: {1}", port, ex.Message));
+                }
                 return false;
             }
         }
