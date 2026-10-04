@@ -11,12 +11,13 @@ namespace ADBLogin.Core.Services
     public class ChromiumPreferenceService
     {
         /// <summary>
-        /// Cập nhật cấu hình Proxy và Vân tay trình duyệt vào tệp Preferences của Profile
+        /// Cập nhật cấu hình Proxy, Vân tay trình duyệt và Tên Profile vào tệp Preferences và Local State của Profile
         /// </summary>
         /// <param name="profileDirectory">Thư mục User Data của profile</param>
         /// <param name="proxy">Thông tin Proxy cần áp dụng</param>
         /// <param name="userAgent">Chuỗi User-Agent tùy biến (nếu có)</param>
-        public bool UpdatePreferences(string profileDirectory, ProxySettings proxy, string userAgent = null)
+        /// <param name="profileName">Tên hiển thị của Profile (đồng bộ lên thanh tiêu đề/Orbita)</param>
+        public bool UpdatePreferences(string profileDirectory, ProxySettings proxy, string userAgent = null, string profileName = null)
         {
             try
             {
@@ -55,8 +56,22 @@ namespace ADBLogin.Core.Services
                     ApplyUserAgent(prefJson, userAgent);
                 }
 
+                // 4. Đồng bộ tên Profile vào gologin và profile để hiển thị chuẩn trên thanh công cụ / Orbita
+                if (!string.IsNullOrEmpty(profileName))
+                {
+                    ApplyProfileName(prefJson, profileName);
+                }
+
                 // Lưu lại tệp Preferences
                 File.WriteAllText(prefFilePath, prefJson.ToString(Newtonsoft.Json.Formatting.Indented));
+
+                // 5. Đồng bộ tên Profile vào Local State và ProfileInfo.txt
+                if (!string.IsNullOrEmpty(profileName))
+                {
+                    UpdateLocalState(profileDirectory, profileName);
+                    UpdateProfileInfoTxt(profileDirectory, profileName);
+                }
+
                 return true;
             }
             catch (Exception)
@@ -129,6 +144,83 @@ namespace ADBLogin.Core.Services
             }
 
             root["gologin"]["userAgent"] = userAgent;
+        }
+
+        private void ApplyProfileName(JObject root, string profileName)
+        {
+            if (string.IsNullOrEmpty(profileName)) return;
+
+            // 1. Chuẩn Chromium Profile
+            if (root["profile"] == null)
+            {
+                root["profile"] = new JObject();
+            }
+            var profToken = (JObject)root["profile"];
+            profToken["name"] = profileName;
+
+            // 2. Gologin / Orbita Metadata
+            if (root["gologin"] == null)
+            {
+                root["gologin"] = new JObject();
+            }
+            var glToken = (JObject)root["gologin"];
+            glToken["name"] = profileName;
+            glToken["profileName"] = profileName;
+        }
+
+        private void UpdateLocalState(string profileDirectory, string profileName)
+        {
+            if (string.IsNullOrEmpty(profileDirectory) || string.IsNullOrEmpty(profileName)) return;
+
+            string localStatePath = Path.Combine(profileDirectory, "Local State");
+            if (!File.Exists(localStatePath)) return;
+
+            try
+            {
+                string content = File.ReadAllText(localStatePath);
+                if (string.IsNullOrWhiteSpace(content)) return;
+
+                var localState = JObject.Parse(content);
+                var prof = localState["profile"] as JObject;
+                if (prof != null)
+                {
+                    var cache = prof["info_cache"] as JObject;
+                    if (cache != null)
+                    {
+                        foreach (var prop in cache.Properties())
+                        {
+                            var d = prop.Value as JObject;
+                            if (d != null)
+                            {
+                                d["name"] = profileName;
+                                d["user_name"] = profileName;
+                            }
+                        }
+                        File.WriteAllText(localStatePath, localState.ToString(Newtonsoft.Json.Formatting.Indented));
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void UpdateProfileInfoTxt(string profileDirectory, string profileName)
+        {
+            if (string.IsNullOrEmpty(profileDirectory) || string.IsNullOrEmpty(profileName)) return;
+
+            string infoPath = Path.Combine(profileDirectory, "ProfileInfo.txt");
+            if (!File.Exists(infoPath)) return;
+
+            try
+            {
+                string content = File.ReadAllText(infoPath);
+                string[] parts = content.Split('|');
+                if (parts.Length >= 2)
+                {
+                    parts[0] = profileName;
+                    File.WriteAllText(infoPath, string.Join("|", parts));
+                }
+            }
+            catch { }
         }
     }
 }

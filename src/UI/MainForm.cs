@@ -1850,6 +1850,23 @@ namespace ADBLogin.UI
                 if (form.ShowDialog(this) == DialogResult.OK)
                 {
                     _accountManager.AddOrUpdateProfile(form.Profile);
+
+                    // Đồng bộ ngay lập tức tên và cấu hình mới vào tệp Preferences & Local State của Profile trên ổ đĩa
+                    try
+                    {
+                        string profileDir = form.Profile.BrowserPath;
+                        if (string.IsNullOrEmpty(profileDir) || !Directory.Exists(profileDir))
+                        {
+                            profileDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Files", "Profiles", form.Profile.ProfileId);
+                        }
+                        if (Directory.Exists(profileDir))
+                        {
+                            var proxy = !string.IsNullOrEmpty(form.Profile.Proxy) ? ProxySettings.Parse(form.Profile.Proxy) : null;
+                            new ChromiumPreferenceService().UpdatePreferences(profileDir, proxy, form.Profile.UserAgent, form.Profile.ProfileName);
+                        }
+                    }
+                    catch { }
+
                     LoadData();
                     _lblStatus.Text = string.Format("Đã cập nhật profile [{0}]!", profile.ProfileName);
                 }

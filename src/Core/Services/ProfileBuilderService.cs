@@ -83,7 +83,7 @@ namespace ADBLogin.Core.Services
 
             // 5. Cap nhat Preferences cua Chromium
             ProxySettings proxySettings = ProxySettings.Parse(proxy);
-            _prefService.UpdatePreferences(profileDir, proxySettings, userAgent);
+            _prefService.UpdatePreferences(profileDir, proxySettings, userAgent, profileName);
 
             // 6. Tra ve doi tuong UserProfile
             var userProfile = new UserProfile

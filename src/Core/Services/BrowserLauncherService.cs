@@ -52,7 +52,7 @@ namespace ADBLogin.Core.Services
             }
 
             ProxySettings proxy = !string.IsNullOrEmpty(profile.Proxy) ? ProxySettings.Parse(profile.Proxy) : null;
-            _prefService.UpdatePreferences(profileDir, proxy, effectiveUA);
+            _prefService.UpdatePreferences(profileDir, proxy, effectiveUA, profile.ProfileName);
 
             // 3. Cau hinh ChromeOptions
             var options = new ChromeOptions();
@@ -65,6 +65,13 @@ namespace ADBLogin.Core.Services
 
             // Gan thu muc Profile
             options.AddArgument(string.Format("--user-data-dir={0}", profileDir));
+
+            // Dong bo ten Profile len tieu de cua so / Orbita UI
+            if (!string.IsNullOrEmpty(profile.ProfileName))
+            {
+                options.AddArgument(string.Format("--profile-name={0}", profile.ProfileName));
+                options.AddArgument(string.Format("--app-title={0}", profile.ProfileName));
+            }
 
             // Mo Remote Debugging Port (CDP) cho phep automation ben ngoai (Python, Puppeteer, Playwright)
             if (debuggingPort <= 0)
