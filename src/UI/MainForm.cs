@@ -61,7 +61,14 @@ namespace ADBLogin.UI
 
         public MainForm()
         {
-            _accountManager = new AccountManager();
+            _accountManager = AccountManager.Instance;
+            _accountManager.ProfilesChanged += (s, e) =>
+            {
+                if (this.IsHandleCreated && !this.IsDisposed)
+                {
+                    this.BeginInvoke(new Action(LoadData));
+                }
+            };
             _launcherService = new BrowserLauncherService();
             _proxyChecker = new ProxyCheckerService();
             _sessionManager = BrowserSessionManager.Instance;

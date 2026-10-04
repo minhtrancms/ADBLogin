@@ -50,6 +50,10 @@ namespace ADBLogin.Core.Services
                 // 2. Cấu hình Proxy & Metadata cho nhân trình duyệt Antidetect (nếu có trường gologin)
                 ApplyAntidetectProxy(prefJson, proxy);
 
+                // 2.1 Tự động vô hiệu hóa các Extension Proxy / VPN xung đột (Proxy Helper, SwitchyOmega, 1click VPN, v.v.)
+                // để Chromium tuân thủ 100% proxy được gán từ ADBLogin mà không bị tiện ích chặn/làm mất mạng/lộ IP
+                DisableConflictingProxyExtensions(prefJson, proxy);
+
                 // 3. Cấu hình User-Agent nếu được truyền vào
                 if (!string.IsNullOrEmpty(userAgent))
                 {
@@ -135,12 +139,69 @@ namespace ADBLogin.Core.Services
             }
             else
             {
-                glProxy["mode"] = "fixed_servers";
-                glProxy["type"] = proxy.Protocol.ToString().ToLower();
+                string proto = proxy.Protocol.ToString().ToLower();
+                glProxy["mode"] = proto;
+                glProxy["type"] = proto;
                 glProxy["host"] = proxy.Host;
                 glProxy["port"] = proxy.Port;
                 glProxy["username"] = proxy.Username ?? "";
                 glProxy["password"] = proxy.Password ?? "";
+            }
+        }
+
+        private void DisableConflictingProxyExtensions(JObject root, ProxySettings proxy)
+        {
+            if (proxy == null || !proxy.IsEnabled) return;
+            if (root["extensions"] == null || root["extensions"]["settings"] == null) return;
+
+            var settings = root["extensions"]["settings"] as JObject;
+            if (settings == null) return;
+
+            foreach (var prop in settings.Properties())
+            {
+                var extObj = prop.Value as JObject;
+                if (extObj == null) continue;
+
+                bool isProxyExt = false;
+                string id = prop.Name;
+                if (id == "mnloefcpaepkpmhaoipjkpikbnkmbnic" || // Proxy Helper
+                    id == "fcfhplploccackoneaefokcmbjfbkenj" || // Free VPN for Chrome - 1click VPN
+                    id == "padekgcemlokbadohgkifijomclgjgif" || // Proxy SwitchyOmega
+                    id == "gcknhkkoolaabfmlnjonogaaifnjlfnp" || // FoxyProxy
+                    id == "cahedbgfiagepiohgodabbiplkocdpac")   // SmartProxy
+                {
+                    isProxyExt = true;
+                }
+
+                if (!isProxyExt)
+                {
+                    var actPerms = extObj["active_permissions"] as JObject;
+                    if (actPerms != null && actPerms["api"] != null)
+                    {
+                        string apiStr = actPerms["api"].ToString();
+                        if (apiStr.Contains("proxy")) isProxyExt = true;
+                    }
+                }
+
+                if (!isProxyExt)
+                {
+                    var man = extObj["manifest"] as JObject;
+                    if (man != null && man["permissions"] != null)
+                    {
+                        string permStr = man["permissions"].ToString();
+                        if (permStr.Contains("proxy")) isProxyExt = true;
+                    }
+                }
+
+                if (isProxyExt)
+                {
+                    extObj["state"] = 0; // Disable extension
+                    extObj["disable_reasons"] = new JArray(1); // 1 = DISABLE_USER_ACTION
+                    if (extObj["preferences"] != null)
+                    {
+                        extObj.Remove("preferences");
+                    }
+                }
             }
         }
 

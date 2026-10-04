@@ -199,6 +199,17 @@ namespace ADBLogin.Core.Services
             }
         }
 
+        public event EventHandler ProfilesChanged;
+
+        private void OnProfilesChanged()
+        {
+            var handler = ProfilesChanged;
+            if (handler != null)
+            {
+                try { handler(this, EventArgs.Empty); } catch { }
+            }
+        }
+
         /// <summary>
         /// Lưu danh sách hồ sơ xuống đĩa cục bộ
         /// </summary>
@@ -208,6 +219,7 @@ namespace ADBLogin.Core.Services
             {
                 string json = JsonConvert.SerializeObject(_profiles, Formatting.Indented);
                 File.WriteAllText(ProfilesFilePath, json);
+                OnProfilesChanged();
                 return true;
             }
             catch (Exception)
