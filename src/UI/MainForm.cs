@@ -566,14 +566,14 @@ namespace ADBLogin.UI
             _grid.Columns["clTags"].Width = 150;
             _grid.Columns["clTags"].MinimumWidth = 120;
 
-            _grid.Columns["clRunningStatus"].Width = 180;
+            _grid.Columns["clRunningStatus"].Width = 190;
             _grid.Columns["clRunningStatus"].MinimumWidth = 140;
 
             _grid.Columns["clProxy"].Width = 145;
-            _grid.Columns["clProxy"].MinimumWidth = 120;
+            _grid.Columns["clProxy"].MinimumWidth = 110;
 
-            _grid.Columns["clStatusProxy"].Width = 155;
-            _grid.Columns["clStatusProxy"].MinimumWidth = 125;
+            _grid.Columns["clStatusProxy"].Width = 210;
+            _grid.Columns["clStatusProxy"].MinimumWidth = 160;
 
             _grid.Columns["clNote"].Width = 120;
             _grid.Columns["clNote"].MinimumWidth = 80;
@@ -730,11 +730,12 @@ namespace ADBLogin.UI
                     e.PaintBackground(e.CellBounds, true);
 
                     string val = e.Value.ToString();
+                    bool isSelected = (e.State & DataGridViewElementStates.Selected) != 0;
                     bool isRunning = val.Contains("ĐANG MỞ") || val.StartsWith("▶") || val.Contains("Auto") || val.Contains("Đồng Bộ");
 
                     Color pillBg = Color.FromArgb(243, 244, 246);
                     Color pillBorder = Color.FromArgb(209, 213, 219);
-                    Color textColor = Color.FromArgb(107, 114, 128);
+                    Color textColor = Color.FromArgb(100, 116, 139);
 
                     if (val.IndexOf("FB", StringComparison.OrdinalIgnoreCase) >= 0 || val.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
@@ -773,7 +774,7 @@ namespace ADBLogin.UI
                         textColor = Color.FromArgb(21, 128, 61);
                     }
 
-                    DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
+                    DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor, isSelected);
                     e.Handled = true;
                 }
                 else if (colName == "clStatusProxy" && e.Value != null)
@@ -781,9 +782,10 @@ namespace ADBLogin.UI
                     e.PaintBackground(e.CellBounds, true);
 
                     string val = e.Value.ToString();
+                    bool isSelected = (e.State & DataGridViewElementStates.Selected) != 0;
                     Color pillBg = Color.FromArgb(243, 244, 246);
                     Color pillBorder = Color.FromArgb(229, 231, 235);
-                    Color textColor = Color.FromArgb(75, 85, 99);
+                    Color textColor = Color.FromArgb(100, 116, 139);
 
                     if (val.Contains("LIVE"))
                     {
@@ -803,8 +805,14 @@ namespace ADBLogin.UI
                         pillBorder = Color.FromArgb(253, 230, 138);
                         textColor = Color.FromArgb(180, 83, 9);
                     }
+                    else if (val.Contains("Direct"))
+                    {
+                        pillBg = Color.FromArgb(240, 249, 255);
+                        pillBorder = Color.FromArgb(186, 230, 253);
+                        textColor = Color.FromArgb(3, 105, 161);
+                    }
 
-                    DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor);
+                    DrawPillBadge(e.Graphics, e.CellBounds, val, pillBg, pillBorder, textColor, isSelected);
                     e.Handled = true;
                 }
             }
@@ -931,7 +939,7 @@ namespace ADBLogin.UI
             catch { }
         }
 
-        private void DrawPillBadge(Graphics g, Rectangle bounds, string text, Color bg, Color border, Color textColor)
+        private void DrawPillBadge(Graphics g, Rectangle bounds, string text, Color bg, Color border, Color textColor, bool isSelected = false)
         {
             if (bounds.Width < 15 || bounds.Height < 10) return;
 
@@ -939,34 +947,42 @@ namespace ADBLogin.UI
             {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
 
-                int padX = 6;
-                int padY = 5;
+                int padX = 4;
+                int padY = 4;
                 int w = bounds.Width - (padX * 2);
                 int h = bounds.Height - (padY * 2);
                 if (w < 8 || h < 8) return;
 
                 Rectangle pillRect = new Rectangle(bounds.X + padX, bounds.Y + padY, w, h);
 
-                using (GraphicsPath path = GetRoundedRectangle(pillRect, 5))
+                if (!isSelected)
                 {
-                    using (SolidBrush brush = new SolidBrush(bg))
+                    using (GraphicsPath path = GetRoundedRectangle(pillRect, 4))
                     {
-                        g.FillPath(brush, path);
-                    }
-                    using (Pen pen = new Pen(border, 1f))
-                    {
-                        g.DrawPath(pen, path);
+                        using (SolidBrush brush = new SolidBrush(bg))
+                        {
+                            g.FillPath(brush, path);
+                        }
+                        using (Pen pen = new Pen(border, 1f))
+                        {
+                            g.DrawPath(pen, path);
+                        }
                     }
                 }
 
-                TextRenderer.DrawText(
-                    g,
-                    text ?? "",
-                    new Font("Segoe UI", 8F, FontStyle.Bold),
-                    pillRect,
-                    textColor,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordEllipsis
-                );
+                Rectangle textRect = new Rectangle(pillRect.X + 6, pillRect.Y, pillRect.Width - 10, pillRect.Height);
+                using (Font font = new Font("Segoe UI", 8F, FontStyle.Bold))
+                {
+                    Color renderColor = isSelected ? Color.FromArgb(17, 24, 39) : textColor;
+                    TextRenderer.DrawText(
+                        g,
+                        text ?? "",
+                        font,
+                        textRect,
+                        renderColor,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix
+                    );
+                }
             }
             catch { }
         }
@@ -986,7 +1002,7 @@ namespace ADBLogin.UI
 
             int diameter = radius * 2;
             path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
-            path.AddArc(rect.Right - diameter, rect.X, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
             path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
             path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
             path.CloseFigure();
