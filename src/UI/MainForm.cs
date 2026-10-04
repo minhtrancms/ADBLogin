@@ -25,30 +25,15 @@ namespace ADBLogin.UI
         private ComboBox _cboFilterTag;
         private bool _allChecked = false;
 
+        private Button _btnProfileMenu;
         private Button _btnLaunch;
         private Button _btnStop;
-        private Button _btnStopAll;
-        private Button _btnAutoCreate;
-        private Button _btnCheckProxy;
-        private Button _btnCheckAllProxy;
-        private Button _btnAdd;
-        private Button _btnQuickTag;
-        private Button _btnDelete;
-        private Button _btnOpenFolder;
-        private Button _btnCopyProxy;
+        private Button _btnRunOptions;
+        private Button _btnProxyMenu;
+        private Button _btnMmoMenu;
+        private Button _btnToolsMenu;
         private Button _btnRefresh;
-        private Button _btnFacebookAuto;
-        private Button _btnGoogleAuto;
-        private Button _btnTikTokAuto;
-        private Button _btnShopeeAuto;
-        private Button _btnTwitterAuto;
-        private Button _btnTelegramAuto;
-        private Button _btnMoreAuto;
-        private Button _btnScheduler;
-        private Button _btnBatchImport;
-        private Button _btnSync;
-        private Button _btnHmaProxy;
-        private Button _btnAdvSettings;
+        private ToolStripMenuItem _itemCheckAllProxy;
 
         private NumericUpDown _numRows;
         private NumericUpDown _numCols;
@@ -173,7 +158,7 @@ namespace ADBLogin.UI
                 searchBoxPanel.Location = new Point(headerPanel.ClientSize.Width - searchBoxPanel.Width - 14, 9);
             };
 
-            // ================= 2. TOOLBAR 1: QUẢN LÝ PROFILE & MÔI TRƯỜNG =================
+            // ================= 2. SMART COMMAND BAR (THANH ĐIỀU KHIỂN THÔNG MINH GỌN GÀNG) =================
             Panel pnlProfileBar = new Panel
             {
                 Dock = DockStyle.Top,
@@ -188,15 +173,12 @@ namespace ADBLogin.UI
 
             ToolTip toolTip = new ToolTip();
 
-            // Group 1: Tạo mới & Nhập Nick (GoLogin Primary Actions)
-            _btnAdd = CreateCompactButton("➕ Thêm Profile", Color.FromArgb(37, 99, 235), Color.White, 118, true, "Thêm một profile mới thủ công (GoLogin style)", Color.FromArgb(29, 78, 216));
-            _btnAdd.Click += BtnAdd_Click;
-
-            _btnAutoCreate = CreateCompactButton("🚀 Tạo Nhanh", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 86, false, "Tạo tự động hàng loạt profile kèm proxy & user-agent", Color.FromArgb(226, 232, 240));
-            _btnAutoCreate.Click += BtnAutoCreate_Click;
-
-            _btnBatchImport = CreateCompactButton("📥 Nhập Nick", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 84, false, "Nhập tài khoản hàng loạt theo định dạng UID|Pass|2FA|Email|Proxy", Color.FromArgb(226, 232, 240));
-            _btnBatchImport.Click += (s, e) =>
+            // 1. SMART BUTTON: QUẢN LÝ PROFILE
+            _btnProfileMenu = CreateCompactButton("➕ Profile ▾", Color.FromArgb(37, 99, 235), Color.White, 106, true, "Quản lý Profile: Thêm mới, tạo hàng loạt, nhập nick", Color.FromArgb(29, 78, 216));
+            var mnuProfile = new ContextMenuStrip();
+            AddMenuItem(mnuProfile, "➕  Thêm Profile Thủ Công (Ctrl+N)", BtnAdd_Click, Color.FromArgb(37, 99, 235), true);
+            AddMenuItem(mnuProfile, "🚀  Tạo Nhanh Hàng Loạt (Auto-Generate)...", BtnAutoCreate_Click);
+            AddMenuItem(mnuProfile, "📥  Nhập Danh Sách Nick (UID|Pass|2FA|Proxy)...", (s, e) =>
             {
                 using (var impForm = new BatchAccountImporterForm())
                 {
@@ -205,41 +187,138 @@ namespace ADBLogin.UI
                         LoadData();
                     }
                 }
-            };
+            });
+            AddMenuSeparator(mnuProfile);
+            AddMenuItem(mnuProfile, "📁  Mở Thư Mục Profile Dữ Liệu", BtnOpenFolder_Click);
+            AttachSmartDropdown(_btnProfileMenu, mnuProfile);
 
-            // Group 2: Vận hành hàng loạt (Bulk Actions)
-            _btnLaunch = CreateCompactButton("▶ Chạy", Color.FromArgb(16, 185, 129), Color.White, 72, true, "Khởi chạy các profile đã chọn", Color.FromArgb(5, 150, 105));
+            // 2 & 3. FAST ACTIONS: CHẠY & DỪNG
+            _btnLaunch = CreateCompactButton("▶ Chạy", Color.FromArgb(16, 185, 129), Color.White, 76, true, "Khởi chạy các profile đã chọn", Color.FromArgb(5, 150, 105));
             _btnLaunch.Click += BtnLaunch_Click;
 
-            _btnStop = CreateCompactButton("⏹ Dừng", Color.FromArgb(239, 68, 68), Color.White, 70, true, "Đóng trình duyệt các profile đã chọn", Color.FromArgb(220, 38, 38));
+            _btnStop = CreateCompactButton("⏹ Dừng", Color.FromArgb(239, 68, 68), Color.White, 74, true, "Đóng trình duyệt các profile đã chọn", Color.FromArgb(220, 38, 38));
             _btnStop.Click += BtnStop_Click;
 
-            _btnStopAll = CreateCompactButton("Tắt Hết", Color.FromArgb(254, 242, 242), Color.FromArgb(220, 38, 38), 58, false, "Đóng tất cả các trình duyệt đang mở", Color.FromArgb(254, 226, 226));
-            _btnStopAll.Click += BtnStopAll_Click;
+            // 4. SMART BUTTON: ĐIỀU KHIỂN & VẬN HÀNH
+            _btnRunOptions = CreateCompactButton("⚙️ Điều Khiển ▾", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 114, false, "Tắt hết trình duyệt, chế độ mobile, chọn cấu hình lưới", Color.FromArgb(226, 232, 240));
+            var mnuRunOptions = new ContextMenuStrip();
+            AddMenuItem(mnuRunOptions, "⏹  Tắt Tất Cả Trình Duyệt Đang Chạy", BtnStopAll_Click, Color.FromArgb(220, 38, 38), true);
+            AddMenuSeparator(mnuRunOptions);
+            AddMenuItem(mnuRunOptions, "📱  Chế Độ Mobile Farm (Scale 70%, 6 Cột)", (s, e) =>
+            {
+                _chkMobileMode.Checked = !_chkMobileMode.Checked;
+            });
+            AddMenuItem(mnuRunOptions, "📐  Lưới: 1 Hàng x 4 Cột (Màn nhỏ)", (s, e) => { _numRows.Value = 1; _numCols.Value = 4; });
+            AddMenuItem(mnuRunOptions, "📐  Lưới: 1 Hàng x 6 Cột (Chuẩn Mobile Farm)", (s, e) => { _numRows.Value = 1; _numCols.Value = 6; });
+            AddMenuItem(mnuRunOptions, "📐  Lưới: 2 Hàng x 4 Cột (Mặc định)", (s, e) => { _numRows.Value = 2; _numCols.Value = 4; });
+            AddMenuItem(mnuRunOptions, "📐  Lưới: 2 Hàng x 6 Cột (Màn lớn 2K/4K)", (s, e) => { _numRows.Value = 2; _numCols.Value = 6; });
+            AttachSmartDropdown(_btnRunOptions, mnuRunOptions);
 
-            // Group 3: Công cụ quản lý
-            _btnCheckProxy = CreateCompactButton("⚡ Check Proxy", Color.FromArgb(245, 158, 11), Color.White, 96, true, "Kiểm tra Proxy các profile được chọn", Color.FromArgb(217, 119, 6));
-            _btnCheckProxy.Click += BtnCheckProxy_Click;
+            // 5. SMART BUTTON: PROXY STUDIO
+            _btnProxyMenu = CreateCompactButton("🌐 Proxy Studio ▾", Color.FromArgb(14, 165, 233), Color.White, 126, true, "Quản lý Proxy: Multi-Proxy Studio, kiểm tra, sao chép, xoay proxy", Color.FromArgb(2, 132, 199));
+            var mnuProxy = new ContextMenuStrip();
+            AddMenuItem(mnuProxy, "🌐  Trạm Multi-Proxy Studio (WARP, HMA, NordVPN...)", (s, e) =>
+            {
+                try
+                {
+                    var hmaForm = new HmaMultiProxyForm(_accountManager.GetAllProfiles());
+                    hmaForm.FormClosed += (fs, fe) => LoadData();
+                    hmaForm.Show(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở HMA Multi-Proxy:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }, Color.FromArgb(2, 132, 199), true);
+            AddMenuSeparator(mnuProxy);
+            AddMenuItem(mnuProxy, "⚡  Kiểm Tra Proxy Các Profile Được Chọn", BtnCheckProxy_Click);
+            _itemCheckAllProxy = AddMenuItem(mnuProxy, "🔍  Kiểm Tra Toàn Bộ Proxy (Tất Cả Profile)", BtnCheckAllProxy_Click);
+            AddMenuItem(mnuProxy, "📋  Sao Chép Chuỗi Proxy Vào Clipboard", BtnCopyProxy_Click);
+            AddMenuSeparator(mnuProxy);
+            AddMenuItem(mnuProxy, "⚙️  Cấu Hình Xoay Proxy (TMProxy, Tinsoft...) & Captcha", (s, e) =>
+            {
+                try
+                {
+                    var setForm = new AdvancedSettingsForm();
+                    setForm.ShowDialog(this);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("Lỗi mở cấu hình:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            });
+            AttachSmartDropdown(_btnProxyMenu, mnuProxy);
 
-            _btnCheckAllProxy = CreateCompactButton("Tất Cả", Color.FromArgb(255, 251, 235), Color.FromArgb(180, 83, 9), 50, false, "Kiểm tra Proxy toàn bộ danh sách profile", Color.FromArgb(254, 243, 199));
-            _btnCheckAllProxy.Click += BtnCheckAllProxy_Click;
+            // 6. SMART BUTTON: KỊCH BẢN MMO STUDIO
+            _btnMmoMenu = CreateCompactButton("🤖 Kịch Bản MMO ▾", Color.FromArgb(99, 102, 241), Color.White, 134, true, "Kịch bản Automation MMO: Facebook, Google, TikTok, Shopee, X, Telegram...", Color.FromArgb(79, 70, 229));
+            var mnuMmo = new ContextMenuStrip();
+            AddMenuItem(mnuMmo, "📘  Auto Facebook Studio (CDP Automation)", (s, e) =>
+            {
+                try { new FacebookAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto FB: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(24, 119, 242), true);
+            AddMenuItem(mnuMmo, "🌐  Auto Google & Gmail Studio", (s, e) =>
+            {
+                try { new GoogleAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto Google: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(234, 67, 53), true);
+            AddMenuItem(mnuMmo, "🎵  Auto TikTok & FYP Studio", (s, e) =>
+            {
+                try { new TikTokAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto TikTok: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(15, 23, 42), true);
+            AddMenuItem(mnuMmo, "🛒  Auto Shopee (Săn Xu, Voucher, Nuôi Nick)", (s, e) =>
+            {
+                try { new ShopeeAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto Shopee: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(238, 77, 45), true);
+            AddMenuItem(mnuMmo, "🐦  Auto X / Twitter (Airdrop, Follow, Retweet)", (s, e) =>
+            {
+                try { new TwitterAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto Twitter: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(29, 155, 240), true);
+            AddMenuItem(mnuMmo, "✈️  Auto Telegram Web Studio", (s, e) =>
+            {
+                try { new TelegramAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto Telegram: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(34, 158, 217), true);
+            AddMenuSeparator(mnuMmo);
+            AddMenuItem(mnuMmo, "👾  Auto Discord Web (Join Server & Leveling)", (s, e) =>
+            {
+                try { new DiscordAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(88, 101, 242));
+            AddMenuItem(mnuMmo, "📸  Auto Instagram (Nuôi Feed & Reels)", (s, e) =>
+            {
+                try { new InstagramAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(193, 53, 132));
+            AddMenuItem(mnuMmo, "🛍️  Auto Lazada (LazCoins & Voucher)", (s, e) =>
+            {
+                try { new LazadaAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(15, 23, 42));
+            AttachSmartDropdown(_btnMmoMenu, mnuMmo);
 
-            _btnQuickTag = CreateCompactButton("🏷️ Tag", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Gắn nhãn (tags) nhanh cho các profile đang chọn", Color.FromArgb(241, 245, 249));
-            _btnQuickTag.Click += (s, e) => ShowQuickTagDialog();
+            // 7. SMART BUTTON: TIỆN ÍCH & CÔNG CỤ
+            _btnToolsMenu = CreateCompactButton("🛠️ Tiện Ích ▾", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 102, false, "Công cụ: Đồng bộ, lập lịch, gắn nhãn, xóa profile", Color.FromArgb(226, 232, 240));
+            var mnuTools = new ContextMenuStrip();
+            AddMenuItem(mnuTools, "⚡  Đồng Bộ Thao Tác Chuột & Phím (Synchronizer)", (s, e) =>
+            {
+                try { new SynchronizerForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi mở Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(99, 102, 241), true);
+            AddMenuItem(mnuTools, "⏰  Bộ Quản Lý Lập Lịch Tự Động (Scheduler)", (s, e) =>
+            {
+                try { new SchedulerManagerForm().Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi mở Lập Lịch:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(16, 185, 129), true);
+            AddMenuSeparator(mnuTools);
+            AddMenuItem(mnuTools, "🏷️  Gắn Nhãn / Tag Nhanh Profile...", (s, e) => ShowQuickTagDialog());
+            AddMenuItem(mnuTools, "🗑️  Xóa Vĩnh Viễn Profile Đang Chọn (Delete)", BtnDelete_Click, Color.FromArgb(225, 29, 72), true);
+            AttachSmartDropdown(_btnToolsMenu, mnuTools);
 
-            _btnDelete = CreateCompactButton("🗑️ Xóa", Color.FromArgb(255, 241, 242), Color.FromArgb(225, 29, 72), 52, false, "Xóa vĩnh viễn profile đang chọn (Delete)", Color.FromArgb(255, 228, 230));
-            _btnDelete.Click += BtnDelete_Click;
-
-            _btnOpenFolder = CreateCompactButton("📁 Thư Mục", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 75, false, "Mở thư mục lưu trữ profile trên máy", Color.FromArgb(241, 245, 249));
-            _btnOpenFolder.Click += BtnOpenFolder_Click;
-
-            _btnCopyProxy = CreateCompactButton("📋 Copy", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 52, false, "Sao chép Proxy vào Clipboard", Color.FromArgb(241, 245, 249));
-            _btnCopyProxy.Click += BtnCopyProxy_Click;
-
-            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 30, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
-            _btnRefresh.Click += (s, e) => LoadData();
-
-            // Group 4: Bộ lọc nhanh GoLogin (Status & Tag Filter)
+            // BỘ LỌC & CÀI ĐẶT NHANH (BÊN PHẢI COMMAND BAR)
             Label lblFilter = new Label { Text = "Lọc:", AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold), ForeColor = Color.FromArgb(100, 116, 139) };
             _cboFilterStatus = new ComboBox
             {
@@ -258,7 +337,7 @@ namespace ADBLogin.UI
             _cboFilterTag = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 115,
+                Width = 110,
                 Height = 24,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -267,12 +346,11 @@ namespace ADBLogin.UI
             _cboFilterTag.SelectedIndex = 0;
             _cboFilterTag.SelectedIndexChanged += (s, e) => FilterData();
 
-            // Group 5: Bộ chọn phiên bản Chrome / Orbita
             Label lblBrowser = new Label { Text = "🌐", AutoSize = true, Font = new Font("Segoe UI", 9F) };
             _cboBrowserVersion = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 125,
+                Width = 120,
                 Height = 24,
                 Font = new Font("Segoe UI", 8.5F),
                 Cursor = Cursors.Hand
@@ -281,7 +359,6 @@ namespace ADBLogin.UI
             PopulateBrowserVersions();
             _cboBrowserVersion.SelectedIndexChanged += CboBrowserVersion_SelectedIndexChanged;
 
-            // Group 6: Chế độ Mobile & Lưới Phone Farm
             _chkMobileMode = new CheckBox
             {
                 Text = "📱 Mobile",
@@ -315,19 +392,18 @@ namespace ADBLogin.UI
                 }
             };
 
-            pnlProfileBar.Controls.Add(_btnAdd);
-            pnlProfileBar.Controls.Add(_btnAutoCreate);
-            pnlProfileBar.Controls.Add(_btnBatchImport);
+            _btnRefresh = CreateCompactButton("🔄", Color.FromArgb(248, 250, 252), Color.FromArgb(51, 65, 85), 32, false, "Tải lại danh sách profile (F5)", Color.FromArgb(241, 245, 249));
+            _btnRefresh.Click += (s, e) => LoadData();
+
+            pnlProfileBar.Controls.Add(_btnProfileMenu);
             pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(_btnLaunch);
             pnlProfileBar.Controls.Add(_btnStop);
-            pnlProfileBar.Controls.Add(_btnStopAll);
             pnlProfileBar.Controls.Add(CreateDivider());
-            pnlProfileBar.Controls.Add(_btnCheckProxy);
-            pnlProfileBar.Controls.Add(_btnQuickTag);
-            pnlProfileBar.Controls.Add(_btnDelete);
-            pnlProfileBar.Controls.Add(_btnOpenFolder);
-            pnlProfileBar.Controls.Add(_btnRefresh);
+            pnlProfileBar.Controls.Add(_btnRunOptions);
+            pnlProfileBar.Controls.Add(_btnProxyMenu);
+            pnlProfileBar.Controls.Add(_btnMmoMenu);
+            pnlProfileBar.Controls.Add(_btnToolsMenu);
             pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(lblFilter);
             pnlProfileBar.Controls.Add(_cboFilterStatus);
@@ -335,231 +411,16 @@ namespace ADBLogin.UI
             pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(lblBrowser);
             pnlProfileBar.Controls.Add(_cboBrowserVersion);
-            pnlProfileBar.Controls.Add(CreateDivider());
             pnlProfileBar.Controls.Add(_chkMobileMode);
             pnlProfileBar.Controls.Add(lblGridConfig);
             pnlProfileBar.Controls.Add(_numRows);
             pnlProfileBar.Controls.Add(lblRowUnit);
             pnlProfileBar.Controls.Add(_numCols);
+            pnlProfileBar.Controls.Add(CreateDivider());
+            pnlProfileBar.Controls.Add(_btnRefresh);
 
             LayoutCompactToolbar(pnlProfileBar);
             pnlProfileBar.Resize += (s, e) => LayoutCompactToolbar(pnlProfileBar);
-
-            // ================= 3. TOOLBAR 2: TRUNG TÂM AUTOMATION & MMO STUDIO =================
-            Panel pnlAutomationBar = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 38,
-                BackColor = Color.FromArgb(248, 250, 252),
-                Padding = new Padding(8, 4, 8, 4)
-            };
-            pnlAutomationBar.Paint += (s, e) =>
-            {
-                e.Graphics.DrawLine(new Pen(Color.FromArgb(226, 232, 240)), 0, pnlAutomationBar.Height - 1, pnlAutomationBar.Width, pnlAutomationBar.Height - 1);
-            };
-
-            Label lblAutoTitle = new Label
-            {
-                Text = "⚡ KỊCH BẢN MMO:",
-                AutoSize = true,
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(71, 85, 105)
-            };
-
-            _btnFacebookAuto = CreateCompactButton("📘 Auto FB", Color.FromArgb(24, 119, 242), Color.White, 86, true, "Mở Bộ Công Cụ Tự Động Hóa Facebook & CDP Studio", Color.FromArgb(13, 90, 190));
-            _btnFacebookAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var fbForm = new FacebookAutomationForm(_accountManager.GetAllProfiles());
-                    fbForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto FB:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnGoogleAuto = CreateCompactButton("🌐 Auto Google", Color.FromArgb(234, 67, 53), Color.White, 98, true, "Mở Bộ Công Cụ Tự Động Hóa Google & Gmail Studio", Color.FromArgb(200, 45, 35));
-            _btnGoogleAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var googleForm = new GoogleAutomationForm(_accountManager.GetAllProfiles());
-                    googleForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Google:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnTikTokAuto = CreateCompactButton("🎵 Auto TikTok", Color.FromArgb(15, 23, 42), Color.White, 90, true, "Mở Bộ Công Cụ Tự Động Hóa TikTok & FYP Studio", Color.FromArgb(30, 41, 59));
-            _btnTikTokAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var ttForm = new TikTokAutomationForm(_accountManager.GetAllProfiles());
-                    ttForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto TikTok:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnShopeeAuto = CreateCompactButton("🛒 Shopee", Color.FromArgb(238, 77, 45), Color.White, 84, true, "Mở Bộ Công Cụ Tự Động Hóa Shopee (Cày Xu, Săn Voucher, Seeding)", Color.FromArgb(200, 60, 35));
-            _btnShopeeAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var shopeeForm = new ShopeeAutomationForm(_accountManager.GetAllProfiles());
-                    shopeeForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Shopee:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnTwitterAuto = CreateCompactButton("🐦 X / Twitter", Color.FromArgb(29, 155, 240), Color.White, 88, true, "Mở Bộ Công Cụ Tự Động Hóa X / Twitter (Airdrop, Follow, Retweet, Tweet)", Color.FromArgb(20, 130, 210));
-            _btnTwitterAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var twForm = new TwitterAutomationForm(_accountManager.GetAllProfiles());
-                    twForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Twitter:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnTelegramAuto = CreateCompactButton("✈️ Telegram", Color.FromArgb(34, 158, 217), Color.White, 86, true, "Mở Bộ Công Cụ Tự Động Hóa Telegram Web (Join Channel, Reaction)", Color.FromArgb(25, 135, 190));
-            _btnTelegramAuto.Click += (s, e) =>
-            {
-                try
-                {
-                    var tgForm = new TelegramAutomationForm(_accountManager.GetAllProfiles());
-                    tgForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Auto Telegram:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnMoreAuto = CreateCompactButton("🌐 Thêm ▼", Color.FromArgb(139, 92, 246), Color.White, 78, true, "Mở thêm kịch bản Discord, Instagram, Lazada", Color.FromArgb(124, 58, 237));
-            _btnMoreAuto.Click += (s, e) =>
-            {
-                var menu = new ContextMenuStrip();
-                menu.Font = new Font("Segoe UI", 9F);
-
-                var itemDiscord = menu.Items.Add("👾 Auto Discord (Join Server & Leveling)");
-                itemDiscord.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                itemDiscord.ForeColor = Color.FromArgb(88, 101, 242);
-                itemDiscord.Click += (s2, e2) =>
-                {
-                    try { new DiscordAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
-                    catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-                };
-
-                var itemInsta = menu.Items.Add("📸 Auto Instagram (Nuôi Feed & Reels)");
-                itemInsta.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                itemInsta.ForeColor = Color.FromArgb(193, 53, 132);
-                itemInsta.Click += (s2, e2) =>
-                {
-                    try { new InstagramAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
-                    catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-                };
-
-                var itemLazada = menu.Items.Add("🛍️ Auto Lazada (LazCoins & Voucher)");
-                itemLazada.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-                itemLazada.ForeColor = Color.FromArgb(15, 23, 42);
-                itemLazada.Click += (s2, e2) =>
-                {
-                    try { new LazadaAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
-                    catch (Exception ex) { MessageBox.Show(ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
-                };
-
-                menu.Show(_btnMoreAuto, new Point(0, _btnMoreAuto.Height));
-            };
-
-            _btnScheduler = CreateCompactButton("⏰ Lập Lịch", Color.FromArgb(16, 185, 129), Color.White, 78, true, "Bộ Quản Lý Lập Lịch Tự Động & Hàng Đợi Tác Vụ Background", Color.FromArgb(5, 150, 105));
-            _btnScheduler.Click += (s, e) =>
-            {
-                try
-                {
-                    var schedForm = new SchedulerManagerForm();
-                    schedForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở Lập Lịch:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnSync = CreateCompactButton("⚡ Đồng Bộ (Sync)", Color.FromArgb(99, 102, 241), Color.White, 105, true, "Đồng bộ thao tác chuột & phím từ 1 Master sang hàng loạt Slaves", Color.FromArgb(79, 70, 229));
-            _btnSync.Click += (s, e) =>
-            {
-                try
-                {
-                    var syncForm = new SynchronizerForm(_accountManager.GetAllProfiles());
-                    syncForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở giao diện Synchronizer:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnAdvSettings = CreateCompactButton("⚙️ Xoay Proxy & Captcha", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 140, false, "Cấu hình API Xoay Proxy động (TMProxy, Tinsoft...) & Tự động giải Captcha", Color.FromArgb(226, 232, 240));
-            _btnAdvSettings.Click += (s, e) =>
-            {
-                try
-                {
-                    var setForm = new AdvancedSettingsForm();
-                    setForm.ShowDialog(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở cấu hình:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            _btnHmaProxy = CreateCompactButton("🌐 Multi-Proxy Studio", Color.FromArgb(14, 165, 233), Color.White, 140, true, "Quản lý tạo Multi-Proxy từ Cloudflare WARP (Miễn phí) & OpenVPN / HMA / NordVPN", Color.FromArgb(2, 132, 199));
-            _btnHmaProxy.Click += (s, e) =>
-            {
-                try
-                {
-                    var hmaForm = new HmaMultiProxyForm(_accountManager.GetAllProfiles());
-                    hmaForm.FormClosed += (fs, fe) => LoadData();
-                    hmaForm.Show(this);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(string.Format("Lỗi mở HMA Multi-Proxy:\n{0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-
-            pnlAutomationBar.Controls.Add(lblAutoTitle);
-            pnlAutomationBar.Controls.Add(_btnFacebookAuto);
-            pnlAutomationBar.Controls.Add(_btnGoogleAuto);
-            pnlAutomationBar.Controls.Add(_btnTikTokAuto);
-            pnlAutomationBar.Controls.Add(_btnShopeeAuto);
-            pnlAutomationBar.Controls.Add(_btnTwitterAuto);
-            pnlAutomationBar.Controls.Add(_btnTelegramAuto);
-            pnlAutomationBar.Controls.Add(_btnMoreAuto);
-            pnlAutomationBar.Controls.Add(CreateDivider());
-            pnlAutomationBar.Controls.Add(_btnScheduler);
-            pnlAutomationBar.Controls.Add(CreateDivider());
-            pnlAutomationBar.Controls.Add(_btnSync);
-            pnlAutomationBar.Controls.Add(_btnHmaProxy);
-            pnlAutomationBar.Controls.Add(_btnAdvSettings);
-
-            LayoutCompactToolbar(pnlAutomationBar);
-            pnlAutomationBar.Resize += (s, e) => LayoutCompactToolbar(pnlAutomationBar);
 
             // ================= 4. DATAGRIDVIEW (TEXT NHỎ GỌN, DỄ NHÌN) =================
             _grid = new DataGridView
@@ -706,7 +567,6 @@ namespace ADBLogin.UI
             };
 
             this.Controls.Add(_grid);
-            this.Controls.Add(pnlAutomationBar);
             this.Controls.Add(pnlProfileBar);
             this.Controls.Add(headerPanel);
             this.Controls.Add(_lblStatus);
@@ -814,6 +674,149 @@ namespace ADBLogin.UI
                     currentX += c.Width + gap;
                 }
             }
+        }
+
+        private static ContextMenuStrip _activeSmartMenu = null;
+
+        private void AttachSmartDropdown(Button btn, ContextMenuStrip menu, bool openOnHover = true)
+        {
+            menu.Renderer = new ModernMenuRenderer();
+            menu.Font = new Font("Segoe UI", 9F);
+            menu.ShowImageMargin = false;
+            menu.ShowCheckMargin = false;
+            menu.Padding = new Padding(4);
+            menu.DropShadowEnabled = true;
+
+            menu.Closed += (s, e) =>
+            {
+                if (_activeSmartMenu == menu) _activeSmartMenu = null;
+            };
+
+            btn.Click += (s, e) =>
+            {
+                if (menu.Visible)
+                {
+                    menu.Close();
+                    _activeSmartMenu = null;
+                }
+                else
+                {
+                    if (_activeSmartMenu != null && _activeSmartMenu != menu && _activeSmartMenu.Visible)
+                    {
+                        _activeSmartMenu.Close();
+                    }
+                    _activeSmartMenu = menu;
+                    menu.Show(btn, new Point(0, btn.Height + 1));
+                }
+            };
+
+            if (openOnHover)
+            {
+                System.Windows.Forms.Timer hoverTimer = new System.Windows.Forms.Timer { Interval = 160 };
+                hoverTimer.Tick += (s, e) =>
+                {
+                    hoverTimer.Stop();
+                    if (!this.IsDisposed && btn.ClientRectangle.Contains(btn.PointToClient(Cursor.Position)))
+                    {
+                        if (_activeSmartMenu != null && _activeSmartMenu != menu && _activeSmartMenu.Visible)
+                        {
+                            _activeSmartMenu.Close();
+                        }
+                        if (!menu.Visible)
+                        {
+                            _activeSmartMenu = menu;
+                            menu.Show(btn, new Point(0, btn.Height + 1));
+                        }
+                    }
+                };
+
+                btn.MouseEnter += (s, e) =>
+                {
+                    if (_activeSmartMenu != null && _activeSmartMenu.Visible && _activeSmartMenu != menu)
+                    {
+                        _activeSmartMenu.Close();
+                        _activeSmartMenu = menu;
+                        menu.Show(btn, new Point(0, btn.Height + 1));
+                    }
+                    else
+                    {
+                        hoverTimer.Stop();
+                        hoverTimer.Start();
+                    }
+                };
+
+                btn.MouseLeave += (s, e) =>
+                {
+                    hoverTimer.Stop();
+                };
+            }
+        }
+
+        private ToolStripMenuItem AddMenuItem(ContextMenuStrip menu, string text, EventHandler onClick, Color? foreColor = null, bool isBold = false)
+        {
+            var item = new ToolStripMenuItem(text);
+            item.Padding = new Padding(8, 5, 8, 5);
+            item.Font = new Font("Segoe UI", 9F, isBold ? FontStyle.Bold : FontStyle.Regular);
+            if (foreColor.HasValue)
+            {
+                item.ForeColor = foreColor.Value;
+            }
+            else
+            {
+                item.ForeColor = Color.FromArgb(30, 41, 59);
+            }
+
+            if (onClick != null)
+            {
+                item.Click += onClick;
+            }
+
+            menu.Items.Add(item);
+            return item;
+        }
+
+        private void AddMenuSeparator(ContextMenuStrip menu)
+        {
+            ToolStripSeparator sep = new ToolStripSeparator();
+            sep.Margin = new Padding(4, 2, 4, 2);
+            menu.Items.Add(sep);
+        }
+
+        private class ModernMenuRenderer : ToolStripProfessionalRenderer
+        {
+            public ModernMenuRenderer() : base(new ModernMenuColorTable()) { }
+
+            protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+            {
+                if (e.Item.Selected)
+                {
+                    Rectangle rc = new Rectangle(2, 1, e.Item.Width - 4, e.Item.Height - 2);
+                    using (var brush = new SolidBrush(Color.FromArgb(238, 242, 255)))
+                    using (var pen = new Pen(Color.FromArgb(199, 210, 254)))
+                    {
+                        e.Graphics.FillRectangle(brush, rc);
+                        e.Graphics.DrawRectangle(pen, rc);
+                    }
+                }
+                else
+                {
+                    base.OnRenderMenuItemBackground(e);
+                }
+            }
+        }
+
+        private class ModernMenuColorTable : ProfessionalColorTable
+        {
+            public override Color ToolStripDropDownBackground { get { return Color.White; } }
+            public override Color ImageMarginGradientBegin { get { return Color.White; } }
+            public override Color ImageMarginGradientMiddle { get { return Color.White; } }
+            public override Color ImageMarginGradientEnd { get { return Color.White; } }
+            public override Color MenuBorder { get { return Color.FromArgb(226, 232, 240); } }
+            public override Color MenuItemBorder { get { return Color.Transparent; } }
+            public override Color MenuItemSelected { get { return Color.FromArgb(238, 242, 255); } }
+            public override Color MenuStripGradientBegin { get { return Color.White; } }
+            public override Color MenuStripGradientEnd { get { return Color.White; } }
+            public override Color SeparatorDark { get { return Color.FromArgb(241, 245, 249); } }
         }
 
         private void Grid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
@@ -1329,13 +1332,13 @@ namespace ADBLogin.UI
             {
                 _btnStop.Text = checkedCount > 1 ? string.Format("⏹ Dừng ({0})", checkedCount) : "⏹ Dừng";
             }
-            if (_btnDelete != null)
+            if (_btnToolsMenu != null)
             {
-                _btnDelete.Text = checkedCount > 1 ? string.Format("🗑️ Xóa ({0})", checkedCount) : "🗑️ Xóa";
+                _btnToolsMenu.Text = checkedCount > 1 ? string.Format("🛠️ Tiện Ích ({0}) ▾", checkedCount) : "🛠️ Tiện Ích ▾";
             }
-            if (_btnCheckProxy != null)
+            if (_btnProxyMenu != null)
             {
-                _btnCheckProxy.Text = checkedCount > 1 ? string.Format("⚡ Check ({0})", checkedCount) : "⚡ Check Proxy";
+                _btnProxyMenu.Text = checkedCount > 1 ? string.Format("🌐 Proxy ({0}) ▾", checkedCount) : "🌐 Proxy Studio ▾";
             }
         }
 
@@ -2249,7 +2252,7 @@ namespace ADBLogin.UI
             int total = _grid.Rows.Count;
             if (total == 0) return;
 
-            _btnCheckAllProxy.Enabled = false;
+            if (_itemCheckAllProxy != null) _itemCheckAllProxy.Enabled = false;
             _lblStatus.Text = "Đang kiểm tra toàn bộ danh sách Proxy...";
 
             ThreadPool.QueueUserWorkItem((state) =>
@@ -2304,7 +2307,7 @@ namespace ADBLogin.UI
 
                 this.Invoke((MethodInvoker)(() =>
                 {
-                    _btnCheckAllProxy.Enabled = true;
+                    if (_itemCheckAllProxy != null) _itemCheckAllProxy.Enabled = true;
                     _lblStatus.Text = string.Format("Hoàn tất! Live: {0} | Die: {1} | Direct: {2}", liveCount, dieCount, directCount);
                 }));
             });
