@@ -273,6 +273,11 @@ namespace ADBLogin.UI
                 try { new TelegramAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
                 catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto Telegram: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }, Color.FromArgb(34, 158, 217), true);
+            AddMenuItem(mnuMmo, "💬  Auto Zalo Studio (Tìm SĐT & Nhắn Tin)", (s, e) =>
+            {
+                try { new ZaloAutomationForm(_accountManager.GetAllProfiles()).Show(this); }
+                catch (Exception ex) { MessageBox.Show(string.Format("Lỗi Auto Zalo: {0}", ex.Message), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }, Color.FromArgb(0, 104, 255), true);
             AddMenuSeparator(mnuMmo);
             AddMenuItem(mnuMmo, "👾  Auto Discord Web (Join Server & Leveling)", (s, e) =>
             {
