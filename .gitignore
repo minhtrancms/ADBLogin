@@ -29,3 +29,4 @@ tools/wireproxy/warp_configs/
 tools/openvpn/nordvpn_configs/
 tools/openvpn/vpngate_configs/
 hma_config.json
+temp_hma/
