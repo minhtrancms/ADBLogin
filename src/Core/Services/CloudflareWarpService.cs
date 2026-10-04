@@ -134,9 +134,9 @@ namespace ADBLogin.Core.Services
         }
 
         /// <summary>
-        /// Khởi động 1 cổng WARP Proxy cụ thể
+        /// Khởi động 1 cổng WARP Proxy cụ thể với endpoint tùy chọn
         /// </summary>
-        public async Task<bool> StartPortAsync(int port)
+        public async Task<bool> StartPortAsync(int port, int endpointOffset = 0)
         {
             HmaProxyPortItem item;
             lock (_lock)
@@ -160,8 +160,6 @@ namespace ADBLogin.Core.Services
             item.LastError = string.Empty;
             NotifyStatusChanged(item);
 
-            Log(string.Format("Đang chuẩn bị tài khoản WARP cho cổng {0}...", port));
-
             try
             {
                 // 1. Sinh hoặc lấy tài khoản WARP
@@ -171,8 +169,8 @@ namespace ADBLogin.Core.Services
                     throw new Exception("Không thể tạo cấu hình Cloudflare WARP!");
                 }
 
-                // 2. Tạo file cấu hình wireproxy
-                string wireproxyConf = GenerateWireproxyConfig(port, profilePath);
+                // 2. Tạo file cấu hình wireproxy với Endpoint xoay vòng
+                string wireproxyConf = GenerateWireproxyConfig(port, profilePath, endpointOffset);
 
                 // 3. Khởi động tiến trình wireproxy
                 var psi = new ProcessStartInfo
@@ -224,6 +222,68 @@ namespace ADBLogin.Core.Services
             }
         }
 
+        /// <summary>
+        /// Khởi động 1 cổng và tự động kiểm tra, xoay Endpoint liên tục nếu bị trùng IP với các cổng trước
+        /// </summary>
+        public async Task<bool> StartPortWithUniqueIpAsync(int port, HashSet<string> existingIps, int maxAttempts = 10)
+        {
+            HmaProxyPortItem item;
+            lock (_lock)
+            {
+                item = PortItems.FirstOrDefault(p => p.Port == port);
+            }
+
+            if (item == null) return false;
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                Log(string.Format("Cổng {0}: Đang kết nối (Thử lần {1}, Endpoint #{2})...", port, attempt + 1, attempt));
+
+                // Nếu thử từ lần thứ 2 trở lên mà vẫn trùng, xóa profile cũ để wgcf đăng ký tài khoản WARP mới
+                if (attempt >= 2)
+                {
+                    string accDir = Path.Combine(AccountsDir, string.Format("acc_{0}", port));
+                    if (Directory.Exists(accDir))
+                    {
+                        try { Directory.Delete(accDir, true); } catch { }
+                    }
+                }
+
+                bool started = await StartPortAsync(port, attempt);
+                if (!started) continue;
+
+                // Chờ kiểm tra IP Public thực tế
+                await CheckPortPublicIpAsync(item);
+
+                if (!string.IsNullOrEmpty(item.PublicIp) && item.PublicIp != "---")
+                {
+                    if (existingIps == null || !existingIps.Contains(item.PublicIp))
+                    {
+                        // Thành công: IP hoàn toàn độc nhất!
+                        if (existingIps != null) existingIps.Add(item.PublicIp);
+                        item.StatusText = "🟢 LIVE (Độc nhất)";
+                        NotifyStatusChanged(item);
+                        Log(string.Format("🎉 Cổng {0} đã nhận IP ĐỘC NHẤT: {1}", port, item.PublicIp));
+                        return true;
+                    }
+                    else
+                    {
+                        // Bị trùng IP với một cổng khác đã mở!
+                        Log(string.Format("⚠️ Cổng {0} nhận IP {1} (Bị trùng với cổng khác). Đang tự động đổi Endpoint...", port, item.PublicIp));
+                        item.StatusText = string.Format("🔄 Trùng ({0}) -> Đang đổi...", item.PublicIp);
+                        NotifyStatusChanged(item);
+                        StopPort(port);
+                        await Task.Delay(1000);
+                    }
+                }
+            }
+
+            // Nếu sau maxAttempts vẫn không tìm được IP khác, giữ kết nối cuối cùng
+            await StartPortAsync(port, 0);
+            await CheckPortPublicIpAsync(item);
+            return true;
+        }
+
         private async Task<string> EnsureWarpProfileAsync(int port)
         {
             string accDir = Path.Combine(AccountsDir, string.Format("acc_{0}", port));
@@ -253,28 +313,36 @@ namespace ADBLogin.Core.Services
         private static readonly string[] CloudflareEndpoints = new string[]
         {
             "162.159.192.1:2408",
-            "188.114.96.1:2408",
-            "162.159.192.2:500",
-            "188.114.97.1:1701",
-            "162.159.193.10:2408",
-            "188.114.98.1:4500",
-            "162.159.195.1:854",
-            "188.114.99.1:2408",
             "162.159.192.3:2408",
-            "162.159.192.4:500",
-            "188.114.96.2:1701",
-            "188.114.97.2:2408"
+            "188.114.96.1:2408",
+            "188.114.96.3:1701",
+            "188.114.97.2:500",
+            "162.159.192.5:854",
+            "188.114.98.3:4500",
+            "162.159.195.2:2408",
+            "188.114.99.3:2408",
+            "162.159.192.7:2408",
+            "162.159.192.9:500",
+            "188.114.96.5:1701",
+            "188.114.97.5:2408",
+            "162.159.195.4:854",
+            "188.114.96.7:2408",
+            "188.114.97.7:500",
+            "162.159.192.11:1701",
+            "188.114.98.5:2408",
+            "188.114.99.5:4500",
+            "162.159.195.5:2408"
         };
 
-        private string GenerateWireproxyConfig(int port, string wgcfProfilePath)
+        private string GenerateWireproxyConfig(int port, string wgcfProfilePath, int endpointOffset = 0)
         {
             string content = File.ReadAllText(wgcfProfilePath);
             string privateKey = "";
             string address = "172.16.0.2/32";
             string publicKey = "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=";
             
-            // Xoay vong endpoint de tranh Cloudflare gom vao cung 1 cum IP NAT
-            int epIdx = Math.Abs(port.GetHashCode()) % CloudflareEndpoints.Length;
+            // Xoay vong endpoint theo port va attempt offset
+            int epIdx = Math.Abs((port + endpointOffset).GetHashCode()) % CloudflareEndpoints.Length;
             string endpoint = CloudflareEndpoints[epIdx];
 
             var mKey = Regex.Match(content, @"PrivateKey\s*=\s*(.+)");
@@ -359,7 +427,7 @@ BindAddress = 127.0.0.1:{4}
             Log(string.Format("Đã dừng cổng WARP {0}", port));
         }
 
-        public async Task StartAllAsync()
+        public async Task StartAllAsync(bool enforceUniqueIps = true)
         {
             List<int> ports;
             lock (_lock)
@@ -367,9 +435,18 @@ BindAddress = 127.0.0.1:{4}
                 ports = PortItems.Select(p => p.Port).ToList();
             }
 
+            var existingIps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var port in ports)
             {
-                await StartPortAsync(port);
+                if (enforceUniqueIps)
+                {
+                    await StartPortWithUniqueIpAsync(port, existingIps);
+                }
+                else
+                {
+                    await StartPortAsync(port);
+                }
             }
         }
 
@@ -388,7 +465,66 @@ BindAddress = 127.0.0.1:{4}
         }
 
         /// <summary>
-        /// Tự động đổi IP cho cổng: Xóa cấu hình cũ và đăng ký tài khoản WARP mới
+        /// Quét tất cả các cổng đang chạy, phát hiện các cổng bị trùng IP và tự động đổi sang IP khác
+        /// </summary>
+        public async Task<int> DeduplicateAllPortsAsync()
+        {
+            Log("🔍 Bắt đầu kiểm tra và đổi các cổng bị trùng IP...");
+            List<HmaProxyPortItem> runningItems;
+            lock (_lock)
+            {
+                runningItems = PortItems.Where(p => p.Status == HmaTunnelStatus.Connected).ToList();
+            }
+
+            if (runningItems.Count == 0)
+            {
+                Log("Không có cổng nào đang chạy.");
+                return 0;
+            }
+
+            var uniqueIps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicatePorts = new List<int>();
+
+            foreach (var item in runningItems)
+            {
+                if (!string.IsNullOrEmpty(item.PublicIp) && item.PublicIp != "---")
+                {
+                    if (!uniqueIps.Contains(item.PublicIp))
+                    {
+                        uniqueIps.Add(item.PublicIp);
+                    }
+                    else
+                    {
+                        duplicatePorts.Add(item.Port);
+                    }
+                }
+                else
+                {
+                    duplicatePorts.Add(item.Port);
+                }
+            }
+
+            if (duplicatePorts.Count == 0)
+            {
+                Log("✅ Tuyệt vời! Tất cả các cổng đang chạy đều có IP ĐỘC NHẤT, không bị trùng.");
+                return 0;
+            }
+
+            Log(string.Format("Phát hiện {0} cổng bị trùng IP. Đang tự động đổi IP cho từng cổng...", duplicatePorts.Count));
+            int fixedCount = 0;
+
+            foreach (var port in duplicatePorts)
+            {
+                bool success = await StartPortWithUniqueIpAsync(port, uniqueIps, 10);
+                if (success) fixedCount++;
+            }
+
+            Log(string.Format("🎉 Hoàn tất! Đã đổi thành công {0}/{1} cổng trùng IP.", fixedCount, duplicatePorts.Count));
+            return fixedCount;
+        }
+
+        /// <summary>
+        /// Tự động đổi IP cho cổng: Xóa cấu hình cũ và đăng ký tài khoản WARP mới, đồng thời tránh trùng IP với các cổng đang chạy khác
         /// </summary>
         public async Task ResetPortIpAsync(int port)
         {
@@ -400,8 +536,18 @@ BindAddress = 127.0.0.1:{4}
             }
             catch { }
 
-            Log(string.Format("Đã làm mới danh tính cổng {0}. Đang kết nối lại...", port));
-            await StartPortAsync(port);
+            Log(string.Format("Đã làm mới danh tính cổng {0}. Đang kết nối và dò tìm IP độc nhất...", port));
+
+            HashSet<string> existingIps;
+            lock (_lock)
+            {
+                existingIps = new HashSet<string>(
+                    PortItems.Where(p => p.Port != port && !string.IsNullOrEmpty(p.PublicIp) && p.PublicIp != "---")
+                             .Select(p => p.PublicIp),
+                    StringComparer.OrdinalIgnoreCase);
+            }
+
+            await StartPortWithUniqueIpAsync(port, existingIps, 10);
         }
 
         public async Task CheckPortPublicIpAsync(HmaProxyPortItem item)
@@ -418,11 +564,36 @@ BindAddress = 127.0.0.1:{4}
                     req.ReadWriteTimeout = 6000;
                     req.UserAgent = "Mozilla/5.0";
 
-                    var resp = await Task.Run(() => req.Get("http://api.ipify.org"));
+                    string ip = await Task.Run(() =>
+                    {
+                        try
+                        {
+                            var resp = req.Get("http://api.ipify.org");
+                            return resp.ToString().Trim();
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                var resp2 = req.Get("http://icanhazip.com");
+                                return resp2.ToString().Trim();
+                            }
+                            catch
+                            {
+                                try
+                                {
+                                    var resp3 = req.Get("https://api.myip.com");
+                                    var m = Regex.Match(resp3.ToString(), @"""ip""\s*:\s*""([^""]+)""");
+                                    if (m.Success) return m.Groups[1].Value.Trim();
+                                }
+                                catch { }
+                                return string.Empty;
+                            }
+                        }
+                    });
                     sw.Stop();
 
-                    string ip = resp.ToString().Trim();
-                    if (!string.IsNullOrEmpty(ip))
+                    if (!string.IsNullOrEmpty(ip) && ip.Length < 45)
                     {
                         item.PublicIp = ip;
                         item.Country = "Cloudflare";

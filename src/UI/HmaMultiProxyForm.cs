@@ -25,7 +25,9 @@ namespace ADBLogin.UI
         // Tab WARP Controls
         private NumericUpDown _numWarpStartPort;
         private NumericUpDown _numWarpPortCount;
+        private CheckBox _chkWarpAntiDuplicate;
         private Button _btnWarpStartAll;
+        private Button _btnWarpDeduplicate;
         private Button _btnWarpStopAll;
         private Button _btnWarpCheckIp;
         private Button _btnWarpResetIps;
@@ -169,9 +171,9 @@ namespace ADBLogin.UI
             Panel pnlTop = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 88,
+                Height = 94,
                 BackColor = Color.White,
-                Padding = new Padding(12, 10, 12, 10)
+                Padding = new Padding(12, 8, 12, 8)
             };
 
             Label lblIntro = new Label
@@ -183,30 +185,56 @@ namespace ADBLogin.UI
                 ForeColor = Color.FromArgb(217, 119, 6)
             };
 
-            Label lblP1 = new Label { Text = "Cổng Bắt Đầu:", Location = new Point(14, 38), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
-            _numWarpStartPort = new NumericUpDown { Location = new Point(105, 36), Width = 85, Minimum = 1024, Maximum = 65530, Value = 10001, Font = new Font("Segoe UI", 9F) };
+            _chkWarpAntiDuplicate = new CheckBox
+            {
+                Text = "🛡️ Tự động lọc & chống trùng IP khi Khởi động",
+                Location = new Point(620, 8),
+                AutoSize = true,
+                Checked = true,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(16, 185, 129)
+            };
 
-            Label lblP2 = new Label { Text = "Số Cổng Proxy:", Location = new Point(205, 38), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
-            _numWarpPortCount = new NumericUpDown { Location = new Point(300, 36), Width = 70, Minimum = 1, Maximum = 50, Value = 5, Font = new Font("Segoe UI", 9F) };
+            Label lblP1 = new Label { Text = "Cổng Đầu:", Location = new Point(14, 40), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _numWarpStartPort = new NumericUpDown { Location = new Point(80, 38), Width = 80, Minimum = 1024, Maximum = 65530, Value = 10001, Font = new Font("Segoe UI", 9F) };
 
-            Button btnInitWarp = CreateButton("🔄 Nạp Cổng", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 90);
-            btnInitWarp.Location = new Point(380, 34);
+            Label lblP2 = new Label { Text = "Số Cổng:", Location = new Point(168, 40), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            _numWarpPortCount = new NumericUpDown { Location = new Point(228, 38), Width = 60, Minimum = 1, Maximum = 50, Value = 5, Font = new Font("Segoe UI", 9F) };
+
+            Button btnInitWarp = CreateButton("🔄 Nạp", Color.FromArgb(241, 245, 249), Color.FromArgb(51, 65, 85), 65);
+            btnInitWarp.Location = new Point(296, 36);
             btnInitWarp.Click += (s, e) => RebuildWarpPorts();
 
-            _btnWarpStartAll = CreateButton("▶️ Khởi Động Tất Cả", Color.FromArgb(16, 185, 129), Color.White, 150);
-            _btnWarpStartAll.Location = new Point(480, 34);
+            _btnWarpStartAll = CreateButton("▶️ Chạy Tất Cả", Color.FromArgb(16, 185, 129), Color.White, 115);
+            _btnWarpStartAll.Location = new Point(368, 36);
             _btnWarpStartAll.Click += async (s, e) => await StartAllWarpPortsAsync();
 
-            _btnWarpStopAll = CreateButton("⏹️ Dừng Tất Cả", Color.FromArgb(239, 68, 68), Color.White, 115);
-            _btnWarpStopAll.Location = new Point(638, 34);
+            _btnWarpDeduplicate = CreateButton("🛡️ Đổi Cổng Trùng IP", Color.FromArgb(139, 92, 246), Color.White, 145);
+            _btnWarpDeduplicate.Location = new Point(489, 36);
+            _btnWarpDeduplicate.Click += async (s, e) =>
+            {
+                _btnWarpDeduplicate.Enabled = false;
+                try
+                {
+                    int fixedCount = await _warpService.DeduplicateAllPortsAsync();
+                    MessageBox.Show(string.Format("Đã hoàn tất kiểm tra! Đổi thành công {0} cổng bị trùng IP.", fixedCount), "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                finally
+                {
+                    _btnWarpDeduplicate.Enabled = true;
+                }
+            };
+
+            _btnWarpStopAll = CreateButton("⏹️ Dừng", Color.FromArgb(239, 68, 68), Color.White, 80);
+            _btnWarpStopAll.Location = new Point(640, 36);
             _btnWarpStopAll.Click += (s, e) => _warpService.StopAll();
 
-            _btnWarpResetIps = CreateButton("🔄 Đổi IP Mới", Color.FromArgb(245, 158, 11), Color.White, 120);
-            _btnWarpResetIps.Location = new Point(761, 34);
+            _btnWarpResetIps = CreateButton("🔄 Đổi Toàn Bộ IP", Color.FromArgb(245, 158, 11), Color.White, 125);
+            _btnWarpResetIps.Location = new Point(726, 36);
             _btnWarpResetIps.Click += async (s, e) => await ResetAllWarpIpsAsync();
 
-            _btnWarpCheckIp = CreateButton("🔍 Check IP", Color.FromArgb(14, 165, 233), Color.White, 100);
-            _btnWarpCheckIp.Location = new Point(889, 34);
+            _btnWarpCheckIp = CreateButton("🔍 Check IP", Color.FromArgb(14, 165, 233), Color.White, 95);
+            _btnWarpCheckIp.Location = new Point(857, 36);
             _btnWarpCheckIp.Click += async (s, e) =>
             {
                 var tasks = _warpService.PortItems.Where(p => p.Status == HmaTunnelStatus.Connected)
@@ -214,21 +242,23 @@ namespace ADBLogin.UI
                 await Task.WhenAll(tasks);
             };
 
-            _btnWarpAssign = CreateButton("⚡ Gán Profile", Color.FromArgb(99, 102, 241), Color.White, 115);
-            _btnWarpAssign.Location = new Point(997, 34);
+            _btnWarpAssign = CreateButton("⚡ Gán Profile", Color.FromArgb(99, 102, 241), Color.White, 110);
+            _btnWarpAssign.Location = new Point(958, 36);
             _btnWarpAssign.Click += (s, e) => ShowAssignDialogWarp();
 
-            _btnWarpCopy = CreateButton("📋 Copy", Color.FromArgb(71, 85, 105), Color.White, 80);
-            _btnWarpCopy.Location = new Point(1120, 34);
+            _btnWarpCopy = CreateButton("📋 Copy", Color.FromArgb(71, 85, 105), Color.White, 75);
+            _btnWarpCopy.Location = new Point(1074, 36);
             _btnWarpCopy.Click += (s, e) => CopyProxyList(_warpService.PortItems);
 
             pnlTop.Controls.Add(lblIntro);
+            pnlTop.Controls.Add(_chkWarpAntiDuplicate);
             pnlTop.Controls.Add(lblP1);
             pnlTop.Controls.Add(_numWarpStartPort);
             pnlTop.Controls.Add(lblP2);
             pnlTop.Controls.Add(_numWarpPortCount);
             pnlTop.Controls.Add(btnInitWarp);
             pnlTop.Controls.Add(_btnWarpStartAll);
+            pnlTop.Controls.Add(_btnWarpDeduplicate);
             pnlTop.Controls.Add(_btnWarpStopAll);
             pnlTop.Controls.Add(_btnWarpResetIps);
             pnlTop.Controls.Add(_btnWarpCheckIp);
@@ -254,12 +284,22 @@ namespace ADBLogin.UI
             var btnCol = new DataGridViewButtonColumn
             {
                 Name = "clAction",
-                HeaderText = "Thao Tác",
+                HeaderText = "Bật / Tắt",
                 Text = "Bật / Tắt",
                 UseColumnTextForButtonValue = true,
-                Width = 90
+                Width = 85
             };
             _gridWarp.Columns.Add(btnCol);
+
+            var btnRotateCol = new DataGridViewButtonColumn
+            {
+                Name = "clRotateIp",
+                HeaderText = "Đổi IP",
+                Text = "🔄 Đổi IP",
+                UseColumnTextForButtonValue = true,
+                Width = 85
+            };
+            _gridWarp.Columns.Add(btnRotateCol);
 
             _gridWarp.CellContentClick += GridWarp_CellContentClick;
             _gridWarp.CellPainting += Grid_CellPainting;
@@ -304,19 +344,26 @@ namespace ADBLogin.UI
 
         private async void GridWarp_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0 && e.ColumnIndex == _gridWarp.Columns["clAction"].Index)
+            if (e.RowIndex >= 0)
             {
                 var row = _gridWarp.Rows[e.RowIndex];
                 var item = row.Tag as HmaProxyPortItem;
                 if (item == null) return;
 
-                if (item.Status == HmaTunnelStatus.Connected || item.Status == HmaTunnelStatus.Starting)
+                if (e.ColumnIndex == _gridWarp.Columns["clAction"].Index)
                 {
-                    _warpService.StopPort(item.Port);
+                    if (item.Status == HmaTunnelStatus.Connected || item.Status == HmaTunnelStatus.Starting)
+                    {
+                        _warpService.StopPort(item.Port);
+                    }
+                    else
+                    {
+                        await _warpService.StartPortAsync(item.Port);
+                    }
                 }
-                else
+                else if (_gridWarp.Columns.Contains("clRotateIp") && e.ColumnIndex == _gridWarp.Columns["clRotateIp"].Index)
                 {
-                    await _warpService.StartPortAsync(item.Port);
+                    await _warpService.ResetPortIpAsync(item.Port);
                 }
             }
         }
@@ -326,7 +373,8 @@ namespace ADBLogin.UI
             _btnWarpStartAll.Enabled = false;
             try
             {
-                await _warpService.StartAllAsync();
+                bool antiDup = _chkWarpAntiDuplicate != null && _chkWarpAntiDuplicate.Checked;
+                await _warpService.StartAllAsync(antiDup);
             }
             finally
             {

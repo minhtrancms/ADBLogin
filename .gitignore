@@ -20,3 +20,7 @@ Files/Profiles/
 *.user
 *.userosscache
 *.sln.docstates
+
+# Wireproxy WARP dynamic accounts & configs
+tools/wireproxy/warp_accounts/
+tools/wireproxy/warp_configs/
