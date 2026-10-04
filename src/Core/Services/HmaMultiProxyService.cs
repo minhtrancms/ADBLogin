@@ -276,6 +276,18 @@ namespace ADBLogin.Core.Services
                 var files = Directory.GetFiles(folder, "*.ovpn", SearchOption.AllDirectories);
                 foreach (var file in files)
                 {
+                    // Bỏ qua file lỗi 404 HTML
+                    try
+                    {
+                        var fi = new FileInfo(file);
+                        if (fi.Length < 1500)
+                        {
+                            string text = File.ReadAllText(file);
+                            if (text.IndexOf("<html", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                        }
+                    }
+                    catch { }
+
                     string filename = Path.GetFileNameWithoutExtension(file);
                     // Định dạng tên đẹp: e.g. USA.NewYork.TCP -> USA - NewYork (TCP)
                     string displayName = filename.Replace(".", " ").Replace("_", " ");
@@ -654,29 +666,30 @@ namespace ADBLogin.Core.Services
             bool ipFound = false;
             try
             {
-                var request = (HttpWebRequest)WebRequest.Create("http://ip-api.com/json");
-                request.Proxy = new WebProxy("127.0.0.1", item.Port);
-                request.Timeout = 6000;
-                request.ReadWriteTimeout = 6000;
+                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)768 | SecurityProtocolType.Tls;
+                ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, sslErr) => true;
 
-                using (var response = (HttpWebResponse)await request.GetResponseAsync())
-                using (var stream = response.GetResponseStream())
+                var req = (HttpWebRequest)WebRequest.Create("https://api.ipify.org");
+                req.Proxy = new WebProxy("127.0.0.1", item.Port);
+                req.Timeout = 8000;
+                req.ReadWriteTimeout = 8000;
+
+                using (var resp = (HttpWebResponse)await req.GetResponseAsync())
+                using (var stream = resp.GetResponseStream())
                 using (var reader = new StreamReader(stream))
                 {
-                    string json = await reader.ReadToEndAsync();
+                    string ip = (await reader.ReadToEndAsync()).Trim();
                     sw.Stop();
-                    var obj = JObject.Parse(json);
-
-                    item.PublicIp = (string)obj["query"] ?? "---";
-                    item.Country = (string)obj["country"] ?? "---";
-                    item.City = (string)obj["city"] ?? "---";
-                    item.Isp = (string)obj["isp"] ?? "---";
-                    item.PingMs = sw.ElapsedMilliseconds;
-                    item.StatusText = "🟢 LIVE";
-
-                    NotifyStatusChanged(item);
-                    Log(string.Format("Cổng {0}: Public IP: {1} ({2}, {3}) - {4}ms", item.Port, item.PublicIp, item.Country, item.City, item.PingMs));
-                    ipFound = true;
+                    if (!string.IsNullOrEmpty(ip) && ip.Length >= 7)
+                    {
+                        item.PublicIp = ip;
+                        item.PingMs = sw.ElapsedMilliseconds;
+                        item.StatusText = "🟢 LIVE";
+                        item.Country = "Quốc tế";
+                        NotifyStatusChanged(item);
+                        ipFound = true;
+                        Log(string.Format("Cổng {0}: Đã nhận Public IP: {1} ({2}ms)", item.Port, item.PublicIp, item.PingMs));
+                    }
                 }
             }
             catch (Exception ex)
@@ -686,28 +699,54 @@ namespace ADBLogin.Core.Services
 
             if (!ipFound)
             {
-                // Fallback ipify
+                // Fallback ip-api
                 try
                 {
-                    var req2 = (HttpWebRequest)WebRequest.Create("http://api.ipify.org");
+                    var req2 = (HttpWebRequest)WebRequest.Create("http://ip-api.com/json");
                     req2.Proxy = new WebProxy("127.0.0.1", item.Port);
-                    req2.Timeout = 6000;
+                    req2.Timeout = 8000;
                     using (var resp2 = (HttpWebResponse)await req2.GetResponseAsync())
                     using (var s2 = resp2.GetResponseStream())
                     using (var r2 = new StreamReader(s2))
                     {
-                        item.PublicIp = (await r2.ReadToEndAsync()).Trim();
+                        string json = await r2.ReadToEndAsync();
+                        var obj = JObject.Parse(json);
+                        item.PublicIp = (string)obj["query"] ?? "---";
+                        item.Country = (string)obj["country"] ?? "---";
+                        item.City = (string)obj["city"] ?? "---";
+                        item.Isp = (string)obj["isp"] ?? "---";
                         item.PingMs = sw.ElapsedMilliseconds;
-                        item.Country = "Quốc tế";
                         item.StatusText = "🟢 LIVE";
                         NotifyStatusChanged(item);
                         ipFound = true;
+                        Log(string.Format("Cổng {0}: Public IP: {1} ({2}, {3}) - {4}ms", item.Port, item.PublicIp, item.Country, item.City, item.PingMs));
                     }
                 }
                 catch (Exception ex2)
                 {
                     item.LastError = ex2.Message;
                 }
+            }
+            else
+            {
+                // Lấy thông tin quốc gia/thành phố chi tiết
+                try
+                {
+                    var geoReq = (HttpWebRequest)WebRequest.Create("http://ip-api.com/json/" + item.PublicIp);
+                    geoReq.Timeout = 4000;
+                    using (var geoResp = (HttpWebResponse)await geoReq.GetResponseAsync())
+                    using (var geoStream = geoResp.GetResponseStream())
+                    using (var geoReader = new StreamReader(geoStream))
+                    {
+                        string json = await geoReader.ReadToEndAsync();
+                        var obj = JObject.Parse(json);
+                        item.Country = (string)obj["country"] ?? item.Country;
+                        item.City = (string)obj["city"] ?? "---";
+                        item.Isp = (string)obj["isp"] ?? "---";
+                        NotifyStatusChanged(item);
+                    }
+                }
+                catch { }
             }
 
             if (!ipFound)
@@ -724,7 +763,7 @@ namespace ADBLogin.Core.Services
                 }
                 else
                 {
-                    item.StatusText = "❌ Chưa nhận IP";
+                    item.StatusText = "❌ Chưa nhận IP (" + item.LastError + ")";
                 }
                 NotifyStatusChanged(item);
             }
@@ -884,9 +923,60 @@ namespace ADBLogin.Core.Services
 
                     if (string.IsNullOrEmpty(headerStr)) return;
 
+                    string[] lines = headerStr.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+                    if (lines.Length == 0) return;
+
+                    string requestLine = lines[0];
+                    string[] parts = requestLine.Split(' ');
+                    if (parts.Length < 2) return;
+
+                    string method = parts[0].ToUpper();
+                    string target = parts[1];
+
                     // 1. CHẾ ĐỘ UPSTREAM PROXY (Cầu nối bảo mật NordVPN SSL Proxy trên Port 89)
                     if (!string.IsNullOrEmpty(UpstreamHost) && UpstreamPort > 0)
                     {
+                        string targetHost;
+                        int targetPort;
+
+                        if (method == "CONNECT")
+                        {
+                            string[] hp = target.Split(':');
+                            targetHost = hp[0];
+                            targetPort = hp.Length > 1 ? int.Parse(hp[1]) : 443;
+                        }
+                        else
+                        {
+                            if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var uri = new Uri(target);
+                                targetHost = uri.Host;
+                                targetPort = uri.Port > 0 ? uri.Port : 80;
+                            }
+                            else
+                            {
+                                targetHost = null;
+                                targetPort = 80;
+                                foreach (var l in lines)
+                                {
+                                    if (l.StartsWith("Host:", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        string h = l.Substring(5).Trim();
+                                        if (h.Contains(":"))
+                                        {
+                                            var hp = h.Split(':');
+                                            targetHost = hp[0];
+                                            int.TryParse(hp[1], out targetPort);
+                                        }
+                                        else targetHost = h;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(targetHost)) return;
+
                         using (var upstreamClient = new TcpClient())
                         {
                             await upstreamClient.ConnectAsync(UpstreamHost, UpstreamPort);
@@ -902,26 +992,55 @@ namespace ADBLogin.Core.Services
 
                             try
                             {
-                                string forwardHeader = headerStr;
-                                if (!string.IsNullOrEmpty(UpstreamUser))
+                                string auth = !string.IsNullOrEmpty(UpstreamUser)
+                                    ? Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", UpstreamUser, UpstreamPass ?? string.Empty)))
+                                    : string.Empty;
+
+                                string connectReq = string.Format("CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n", targetHost, targetPort, auth);
+                                byte[] connectBytes = Encoding.ASCII.GetBytes(connectReq);
+                                await targetStream.WriteAsync(connectBytes, 0, connectBytes.Length, token);
+
+                                byte[] respBuf = new byte[4096];
+                                int respRead = await targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
+                                if (respRead <= 0) return;
+                                string respStr = Encoding.ASCII.GetString(respBuf, 0, respRead);
+
+                                if (!respStr.Contains("200"))
                                 {
-                                    string auth = Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", UpstreamUser, UpstreamPass ?? string.Empty)));
-                                    string authHeader = string.Format("\r\nProxy-Authorization: Basic {0}\r\n\r\n", auth);
-                                    int insertPos = forwardHeader.IndexOf("\r\n\r\n");
-                                    if (insertPos >= 0)
-                                    {
-                                        forwardHeader = forwardHeader.Substring(0, insertPos) + authHeader;
-                                    }
+                                    // Forward upstream response (e.g. 407 Session Limit) to client
+                                    await clientStream.WriteAsync(respBuf, 0, respRead, token);
+                                    return;
                                 }
 
-                                byte[] forwardBytes = Encoding.ASCII.GetBytes(forwardHeader);
-                                await targetStream.WriteAsync(forwardBytes, 0, forwardBytes.Length, token);
-
-                                int initialHeaderLen = endHeaderIdx + 4;
-                                byte[] fullBytes = ms.ToArray();
-                                if (fullBytes.Length > initialHeaderLen)
+                                if (method == "CONNECT")
                                 {
-                                    await targetStream.WriteAsync(fullBytes, initialHeaderLen, fullBytes.Length - initialHeaderLen, token);
+                                    // HTTPS tunnel established
+                                    await clientStream.WriteAsync(respBuf, 0, respRead, token);
+                                }
+                                else
+                                {
+                                    // Convert GET http://host/path to GET /path
+                                    string modifiedHeader = headerStr;
+                                    if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        var uri = new Uri(target);
+                                        string pathAndQuery = uri.PathAndQuery;
+                                        modifiedHeader = lines[0].Replace(target, pathAndQuery);
+                                        for (int i = 1; i < lines.Length; i++)
+                                        {
+                                            modifiedHeader += "\r\n" + lines[i];
+                                        }
+                                    }
+
+                                    byte[] forwardBytes = Encoding.ASCII.GetBytes(modifiedHeader);
+                                    await targetStream.WriteAsync(forwardBytes, 0, forwardBytes.Length, token);
+
+                                    int initialHeaderLen = endHeaderIdx + 4;
+                                    byte[] fullBytes = ms.ToArray();
+                                    if (fullBytes.Length > initialHeaderLen)
+                                    {
+                                        await targetStream.WriteAsync(fullBytes, initialHeaderLen, fullBytes.Length - initialHeaderLen, token);
+                                    }
                                 }
 
                                 var t1 = RelayStreamAsync(clientStream, targetStream, token);
@@ -943,16 +1062,6 @@ namespace ADBLogin.Core.Services
                         await clientStream.WriteAsync(err503, 0, err503.Length, token);
                         return;
                     }
-
-                    string[] lines = headerStr.Split(new string[] { "\r\n" }, StringSplitOptions.None);
-                    if (lines.Length == 0) return;
-
-                    string requestLine = lines[0];
-                    string[] parts = requestLine.Split(' ');
-                    if (parts.Length < 2) return;
-
-                    string method = parts[0].ToUpper();
-                    string target = parts[1];
 
                     if (method == "CONNECT")
                     {
