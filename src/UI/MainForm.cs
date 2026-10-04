@@ -557,11 +557,10 @@ namespace ADBLogin.UI
             _grid.Columns.Add("clNote", "Ghi Chú");
             _grid.Columns.Add("clPath", "Thư Mục Dữ Liệu");
 
-            _grid.Columns["clId"].Width = 75;
-            _grid.Columns["clId"].MinimumWidth = 60;
+            _grid.Columns["clId"].Visible = false;
 
-            _grid.Columns["clName"].Width = 190;
-            _grid.Columns["clName"].MinimumWidth = 140;
+            _grid.Columns["clName"].MinimumWidth = 180;
+            _grid.Columns["clName"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 
             _grid.Columns["clTags"].Width = 150;
             _grid.Columns["clTags"].MinimumWidth = 120;
@@ -569,17 +568,16 @@ namespace ADBLogin.UI
             _grid.Columns["clRunningStatus"].Width = 190;
             _grid.Columns["clRunningStatus"].MinimumWidth = 140;
 
-            _grid.Columns["clProxy"].Width = 145;
+            _grid.Columns["clProxy"].Width = 150;
             _grid.Columns["clProxy"].MinimumWidth = 110;
 
             _grid.Columns["clStatusProxy"].Width = 210;
             _grid.Columns["clStatusProxy"].MinimumWidth = 160;
 
-            _grid.Columns["clNote"].Width = 120;
-            _grid.Columns["clNote"].MinimumWidth = 80;
+            _grid.Columns["clNote"].Width = 150;
+            _grid.Columns["clNote"].MinimumWidth = 100;
 
-            _grid.Columns["clPath"].MinimumWidth = 160;
-            _grid.Columns["clPath"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            _grid.Columns["clPath"].Visible = false;
 
             _grid.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) BtnLaunch_Click(null, null); };
             _grid.MouseDown += Grid_MouseDown;
