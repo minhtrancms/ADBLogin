@@ -2015,6 +2015,9 @@ namespace ADBLogin.UI
         {
             try
             {
+                System.Net.ServicePointManager.SecurityProtocol = (System.Net.SecurityProtocolType)3072 | (System.Net.SecurityProtocolType)768 | System.Net.SecurityProtocolType.Tls;
+                System.Net.ServicePointManager.ServerCertificateValidationCallback = (s, c, ch, err) => true;
+
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new MainForm());

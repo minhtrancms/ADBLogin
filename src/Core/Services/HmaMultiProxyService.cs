@@ -260,6 +260,9 @@ namespace ADBLogin.Core.Services
             int downloaded = 0;
             try
             {
+                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)768 | SecurityProtocolType.Tls;
+                ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, sslErr) => true;
+
                 using (var client = new WebClient())
                 {
                     client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0";
@@ -386,6 +389,49 @@ namespace ADBLogin.Core.Services
             }
 
             return results;
+        }
+
+        /// <summary>
+        /// Kiểm tra một cổng TCP trên máy tính có đang thực sự sẵn sàng không
+        /// </summary>
+        public static bool IsPortAvailable(int port)
+        {
+            try
+            {
+                using (var s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    s.Bind(new IPEndPoint(IPAddress.Loopback, port));
+                    s.Close();
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tự động tìm dải cổng liên tiếp hoàn toàn trống, tránh hoàn toàn xung đột cổng
+        /// </summary>
+        public static int FindCleanPortRange(int preferredStartPort, int count)
+        {
+            int current = preferredStartPort;
+            while (current < 65000)
+            {
+                bool allOk = true;
+                for (int i = 0; i < count; i++)
+                {
+                    if (!IsPortAvailable(current + i))
+                    {
+                        allOk = false;
+                        current += i + 1;
+                        break;
+                    }
+                }
+                if (allOk) return current;
+            }
+            return preferredStartPort;
         }
 
         /// <summary>
@@ -908,6 +954,7 @@ namespace ADBLogin.Core.Services
                 else
                 {
                     item.StatusText = "❌ Chưa nhận IP (" + item.LastError + ")";
+                    Log(string.Format("Cổng {0}: Chưa nhận được Public IP ({1})", item.Port, item.LastError));
                 }
                 NotifyStatusChanged(item);
             }
@@ -1099,7 +1146,8 @@ namespace ADBLogin.Core.Services
                                 if (UpstreamSsl)
                                 {
                                     sslStream = new SslStream(targetStream, false, (s, cert, chain, err) => true);
-                                    await sslStream.AuthenticateAsClientAsync(UpstreamHost, null, SslProtocols.Tls12, false);
+                                    var authTask = sslStream.AuthenticateAsClientAsync(UpstreamHost, null, SslProtocols.Tls12, false);
+                                    if (await Task.WhenAny(authTask, Task.Delay(5000, token)) != authTask) return;
                                     targetStream = sslStream;
                                 }
 
@@ -1115,7 +1163,9 @@ namespace ADBLogin.Core.Services
                                     await targetStream.FlushAsync(token);
 
                                     byte[] respBuf = new byte[4096];
-                                    int respRead = await targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
+                                    var readTask = targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
+                                    if (await Task.WhenAny(readTask, Task.Delay(5000, token)) != readTask) return;
+                                    int respRead = await readTask;
                                     if (respRead <= 0) return;
                                     string respStr = Encoding.ASCII.GetString(respBuf, 0, respRead);
                                     if (!respStr.Contains("200")) return;
@@ -1243,7 +1293,8 @@ namespace ADBLogin.Core.Services
                             if (UpstreamSsl)
                             {
                                 sslStream = new SslStream(targetStream, false, (s, cert, chain, err) => true);
-                                await sslStream.AuthenticateAsClientAsync(UpstreamHost, null, SslProtocols.Tls12, false);
+                                var authTask = sslStream.AuthenticateAsClientAsync(UpstreamHost, null, SslProtocols.Tls12, false);
+                                if (await Task.WhenAny(authTask, Task.Delay(5000, token)) != authTask) return;
                                 targetStream = sslStream;
                             }
 
@@ -1259,7 +1310,9 @@ namespace ADBLogin.Core.Services
                                 await targetStream.FlushAsync(token);
 
                                 byte[] respBuf = new byte[4096];
-                                int respRead = await targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
+                                var readTask = targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
+                                if (await Task.WhenAny(readTask, Task.Delay(5000, token)) != readTask) return;
+                                int respRead = await readTask;
                                 if (respRead <= 0) return;
                                 string respStr = Encoding.ASCII.GetString(respBuf, 0, respRead);
 

@@ -189,7 +189,7 @@ namespace ADBLogin.UI
             _cboProvider.SelectedIndexChanged += (s, e) => SwitchProviderView();
 
             Label lblP1 = new Label { Text = "Cổng Đầu:", Location = new Point(368, 12), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
-            _numStartPort = new NumericUpDown { Location = new Point(430, 9), Width = 75, Minimum = 1024, Maximum = 65530, Value = 10001, Font = new Font("Segoe UI", 9F) };
+            _numStartPort = new NumericUpDown { Location = new Point(430, 9), Width = 75, Minimum = 1024, Maximum = 65530, Value = 11001, Font = new Font("Segoe UI", 9F) };
 
             Label lblP2 = new Label { Text = "Số Cổng:", Location = new Point(512, 12), AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
             _numPortCount = new NumericUpDown { Location = new Point(568, 9), Width = 55, Minimum = 1, Maximum = 50, Value = 5, Font = new Font("Segoe UI", 9F) };
@@ -580,6 +580,13 @@ namespace ADBLogin.UI
         {
             int start = (int)_numStartPort.Value;
             int count = (int)_numPortCount.Value;
+            int cleanStart = HmaMultiProxyService.FindCleanPortRange(start, count);
+            if (cleanStart != start)
+            {
+                start = cleanStart;
+                _numStartPort.Value = cleanStart;
+            }
+
             int provider = _cboProvider.SelectedIndex;
 
             if (provider == 0) // WARP
@@ -654,11 +661,20 @@ namespace ADBLogin.UI
 
                 int start = (int)_numStartPort.Value;
                 int count = (int)_numPortCount.Value;
+                int cleanStart = HmaMultiProxyService.FindCleanPortRange(start, count);
+                if (cleanStart != start)
+                {
+                    AppendLog(string.Format("[{0:HH:mm:ss}] 💡 Dải cổng {1} đang bị chiếm dụng trên Windows. Đã tự động đổi sang dải cổng trống: {2}", DateTime.Now, start, cleanStart));
+                    start = cleanStart;
+                    _numStartPort.Value = cleanStart;
+                }
+
                 int provider = _cboProvider.SelectedIndex;
 
                 if (provider == 0) // Cloudflare WARP
                 {
                     _warpService.InitializePorts(start, count);
+                    RefreshGridFromItems(_warpService.PortItems, "Cloudflare WARP");
                     bool antiDup = _chkWarpAntiDuplicate != null && _chkWarpAntiDuplicate.Checked;
                     await _warpService.StartAllAsync(antiDup);
                 }
@@ -674,6 +690,7 @@ namespace ADBLogin.UI
                     _openVpnService.SaveConfig();
 
                     _openVpnService.InitializePorts(start, count, _nordServers.Select(s => s.Key).ToList());
+                    RefreshGridFromItems(_openVpnService.PortItems, "NordVPN");
                     await _openVpnService.StartAllAsync();
                 }
                 else if (provider == 2) // VPN Gate
@@ -685,11 +702,13 @@ namespace ADBLogin.UI
                     _openVpnService.SaveConfig();
 
                     _openVpnService.InitializePorts(start, count, _vpnGateServers.Select(s => s.Key).ToList());
+                    RefreshGridFromItems(_openVpnService.PortItems, "VPN Gate");
                     await _openVpnService.StartAllAsync();
                 }
                 else // Custom OpenVPN
                 {
                     _openVpnService.InitializePorts(start, count, _customServers.Select(s => s.Key).ToList());
+                    RefreshGridFromItems(_openVpnService.PortItems, "OpenVPN");
                     await _openVpnService.StartAllAsync();
                 }
             }
