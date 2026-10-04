@@ -150,11 +150,11 @@ namespace ADBLogin.UI
                 Padding = new Point(14, 6)
             };
 
-            _tabWarp = new TabPage("☁️ Cloudflare WARP (Miễn Phí 100% - Không Cần Tài Khoản)");
+            _tabWarp = new TabPage("⚡ Cloudflare WARP (Tự Động)");
             _tabWarp.BackColor = Color.FromArgb(248, 250, 252);
             InitializeWarpTab(_tabWarp);
 
-            _tabOpenVpn = new TabPage("🛡️ OpenVPN (HMA / NordVPN / File .ovpn)");
+            _tabOpenVpn = new TabPage("🌐 VPN Gate (Miễn Phí 100%) & OpenVPN Runner");
             _tabOpenVpn.BackColor = Color.FromArgb(248, 250, 252);
             InitializeOpenVpnTab(_tabOpenVpn);
 
@@ -252,6 +252,12 @@ namespace ADBLogin.UI
 
             pnlTop.Controls.Add(lblIntro);
             pnlTop.Controls.Add(_chkWarpAntiDuplicate);
+            Button btnGoVpnGate = CreateButton("🌐 Sang Tab VPN Gate (Free)", Color.FromArgb(220, 252, 231), Color.FromArgb(22, 101, 52), 190);
+            btnGoVpnGate.Location = new Point(915, 6);
+            btnGoVpnGate.Height = 26;
+            btnGoVpnGate.Click += (s, e) => _tabControl.SelectedTab = _tabOpenVpn;
+            pnlTop.Controls.Add(btnGoVpnGate);
+
             pnlTop.Controls.Add(lblP1);
             pnlTop.Controls.Add(_numWarpStartPort);
             pnlTop.Controls.Add(lblP2);
