@@ -550,7 +550,14 @@ namespace ADBLogin.Core.Services
                 Log(string.Format("✅ Cổng {0} đã mở thành công! (127.0.0.1:{0})", port));
 
                 // Bắt đầu kiểm tra IP Public thực tế
-                var taskCheck = Task.Run(() => CheckPortPublicIpAsync(item));
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await CheckPortPublicIpAsync(item);
+                    }
+                    catch { }
+                });
                 return true;
             }
             catch (Exception ex)
@@ -784,48 +791,63 @@ namespace ADBLogin.Core.Services
         {
             var sw = Stopwatch.StartNew();
             bool ipFound = false;
-            try
+
+            // Danh sách các dịch vụ kiểm tra IP nhanh gọn (HTTP trước cực nhanh ~200ms, HTTPS dự phòng)
+            string[] testUrls = new string[]
             {
-                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)768 | SecurityProtocolType.Tls;
-                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | SecurityProtocolType.Tls;
-                ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, sslErr) => true;
+                "http://api.ipify.org",
+                "http://icanhazip.com",
+                "http://checkip.amazonaws.com",
+                "https://api.ipify.org"
+            };
 
-                var req = (HttpWebRequest)WebRequest.Create("https://api.ipify.org");
-                req.Proxy = new WebProxy("127.0.0.1", item.Port);
-                req.Timeout = 8000;
-                req.ReadWriteTimeout = 8000;
-
-                using (var resp = (HttpWebResponse)await req.GetResponseAsync())
-                using (var stream = resp.GetResponseStream())
-                using (var reader = new StreamReader(stream))
+            foreach (var url in testUrls)
+            {
+                try
                 {
-                    string ip = (await reader.ReadToEndAsync()).Trim();
-                    sw.Stop();
-                    if (!string.IsNullOrEmpty(ip) && ip.Length >= 7)
+                    ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)768 | SecurityProtocolType.Tls;
+                    ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, sslErr) => true;
+
+                    var req = (HttpWebRequest)WebRequest.Create(url);
+                    req.Proxy = new WebProxy("127.0.0.1", item.Port);
+                    req.Timeout = 4000;
+                    req.ReadWriteTimeout = 4000;
+                    req.UserAgent = "curl/7.88.1";
+
+                    using (var resp = (HttpWebResponse)await req.GetResponseAsync())
+                    using (var stream = resp.GetResponseStream())
+                    using (var reader = new StreamReader(stream))
                     {
-                        item.PublicIp = ip;
-                        item.PingMs = sw.ElapsedMilliseconds;
-                        item.StatusText = "🟢 LIVE";
-                        item.Country = "Quốc tế";
-                        NotifyStatusChanged(item);
-                        ipFound = true;
-                        Log(string.Format("Cổng {0}: Đã nhận Public IP: {1} ({2}ms)", item.Port, item.PublicIp, item.PingMs));
+                        string ip = (await reader.ReadToEndAsync()).Trim();
+                        sw.Stop();
+                        IPAddress parsedIp;
+                        if (!string.IsNullOrEmpty(ip) && ip.Length >= 7 && IPAddress.TryParse(ip, out parsedIp))
+                        {
+                            item.PublicIp = ip;
+                            item.PingMs = sw.ElapsedMilliseconds;
+                            item.StatusText = "🟢 LIVE";
+                            item.Country = "Đang lấy vị trí...";
+                            NotifyStatusChanged(item);
+                            ipFound = true;
+                            Log(string.Format("Cổng {0}: Đã nhận Public IP: {1} ({2}ms)", item.Port, item.PublicIp, item.PingMs));
+                            break;
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                item.LastError = ex.Message;
+                catch (Exception ex)
+                {
+                    item.LastError = ex.Message;
+                }
             }
 
             if (!ipFound)
             {
-                // Fallback ip-api
+                // Fallback ip-api qua proxy
                 try
                 {
                     var req2 = (HttpWebRequest)WebRequest.Create("http://ip-api.com/json");
                     req2.Proxy = new WebProxy("127.0.0.1", item.Port);
-                    req2.Timeout = 8000;
+                    req2.Timeout = 5000;
                     using (var resp2 = (HttpWebResponse)await req2.GetResponseAsync())
                     using (var s2 = resp2.GetResponseStream())
                     using (var r2 = new StreamReader(s2))
@@ -848,13 +870,14 @@ namespace ADBLogin.Core.Services
                     item.LastError = ex2.Message;
                 }
             }
-            else
+
+            // Lấy thông tin quốc gia & thành phố trực tiếp từ IP đã có (cực nhanh không tốn băng thông proxy)
+            if (ipFound && !string.IsNullOrEmpty(item.PublicIp) && item.PublicIp != "---" && (item.Country == "Đang lấy vị trí..." || item.Country == "Quốc tế" || string.IsNullOrEmpty(item.Country)))
             {
-                // Lấy thông tin quốc gia/thành phố chi tiết
                 try
                 {
                     var geoReq = (HttpWebRequest)WebRequest.Create("http://ip-api.com/json/" + item.PublicIp);
-                    geoReq.Timeout = 4000;
+                    geoReq.Timeout = 3000;
                     using (var geoResp = (HttpWebResponse)await geoReq.GetResponseAsync())
                     using (var geoStream = geoResp.GetResponseStream())
                     using (var geoReader = new StreamReader(geoStream))
@@ -1089,6 +1112,7 @@ namespace ADBLogin.Core.Services
                                     string connectReq = string.Format("CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n", targetHost, targetPort, auth);
                                     byte[] connectBytes = Encoding.ASCII.GetBytes(connectReq);
                                     await targetStream.WriteAsync(connectBytes, 0, connectBytes.Length, token);
+                                    await targetStream.FlushAsync(token);
 
                                     byte[] respBuf = new byte[4096];
                                     int respRead = await targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
@@ -1099,6 +1123,7 @@ namespace ADBLogin.Core.Services
                                     // Phản hồi SOCKS5 Success cho client: 05 00 00 01 00 00 00 00 00 00
                                     byte[] socks5Ok = new byte[] { 0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0 };
                                     await clientStream.WriteAsync(socks5Ok, 0, socks5Ok.Length, token);
+                                    await clientStream.FlushAsync(token);
 
                                     var t1 = RelayStreamAsync(clientStream, targetStream, token);
                                     var t2 = RelayStreamAsync(targetStream, clientStream, token);
@@ -1231,6 +1256,7 @@ namespace ADBLogin.Core.Services
                                 string connectReq = string.Format("CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n", targetHost, targetPort, auth);
                                 byte[] connectBytes = Encoding.ASCII.GetBytes(connectReq);
                                 await targetStream.WriteAsync(connectBytes, 0, connectBytes.Length, token);
+                                await targetStream.FlushAsync(token);
 
                                 byte[] respBuf = new byte[4096];
                                 int respRead = await targetStream.ReadAsync(respBuf, 0, respBuf.Length, token);
@@ -1241,6 +1267,7 @@ namespace ADBLogin.Core.Services
                                 {
                                     // Forward upstream response (e.g. 407 Session Limit) to client
                                     await clientStream.WriteAsync(respBuf, 0, respRead, token);
+                                    await clientStream.FlushAsync(token);
                                     return;
                                 }
 
@@ -1248,6 +1275,7 @@ namespace ADBLogin.Core.Services
                                 {
                                     // HTTPS tunnel established
                                     await clientStream.WriteAsync(respBuf, 0, respRead, token);
+                                    await clientStream.FlushAsync(token);
                                 }
                                 else
                                 {
@@ -1266,12 +1294,14 @@ namespace ADBLogin.Core.Services
 
                                     byte[] forwardBytes = Encoding.ASCII.GetBytes(modifiedHeader);
                                     await targetStream.WriteAsync(forwardBytes, 0, forwardBytes.Length, token);
+                                    await targetStream.FlushAsync(token);
 
                                     int initialHeaderLen = endHeaderIdx + 4;
                                     byte[] fullBytes = ms.ToArray();
                                     if (fullBytes.Length > initialHeaderLen)
                                     {
                                         await targetStream.WriteAsync(fullBytes, initialHeaderLen, fullBytes.Length - initialHeaderLen, token);
+                                        await targetStream.FlushAsync(token);
                                     }
                                 }
 
@@ -1308,6 +1338,7 @@ namespace ADBLogin.Core.Services
 
                             byte[] okResponse = Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection Established\r\n\r\n");
                             await clientStream.WriteAsync(okResponse, 0, okResponse.Length, token);
+                            await clientStream.FlushAsync(token);
 
                             using (var targetStream = new NetworkStream(targetSocket))
                             {
@@ -1388,6 +1419,7 @@ namespace ADBLogin.Core.Services
                 while ((read = await source.ReadAsync(buf, 0, buf.Length, token)) > 0)
                 {
                     await destination.WriteAsync(buf, 0, read, token);
+                    await destination.FlushAsync(token);
                 }
             }
             catch { }
