@@ -760,6 +760,7 @@ namespace ADBLogin.Core.Services
 
             _cts = new CancellationTokenSource();
             _listener = new TcpListener(IPAddress.Loopback, Port);
+            _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _listener.Start(100);
             _isRunning = true;
 
